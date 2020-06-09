@@ -27,7 +27,7 @@ workflow ConvertToFasta {
 
     call combine {
         input:
-            split_fastas = convert.fasta
+            split_fastas = convert.fasta,
             marker_positions = convert.marker_positions
     }
 

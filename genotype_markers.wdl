@@ -17,7 +17,7 @@ workflow GenotypeMarkers {
 
     call genotype {
         input:
-            alignment=align_dataset.alignment
+            alignment=align_dataset.alignment,
             marker_positions=marker_positions
     }
     output {
