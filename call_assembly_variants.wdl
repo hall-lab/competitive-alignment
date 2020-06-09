@@ -267,6 +267,6 @@ task align_contigs {
         docker: "apregier/analyze_assemblies@sha256:edf94bd952180acb26423e9b0e583a8b00d658ac533634d59b32523cbd2a602a"
     }
     output {
-        File bam = aligned.bam
+        File bam = "aligned.bam"
     }
 }
