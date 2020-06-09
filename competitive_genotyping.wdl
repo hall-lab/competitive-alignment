@@ -27,9 +27,9 @@ workflow CompetitiveGenotyping {
 
     call merge_variants {
         input:
-            small_variants=select_all(call_variants.small_variants),
-            small_variants_marker_positions=select_all(call_variants.small_variants_marker_positions) #,
-            #sv=select_all(call_variants.sv)  #TODO
+            small_variants=call_variants.small_variants,
+            small_variants_marker_positions=call_variants.small_variants_marker_positions #,
+            #sv=call_variants.sv  #TODO
     }
 
     scatter (dataset in datasets) {
