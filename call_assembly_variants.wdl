@@ -246,8 +246,8 @@ task call_small_variants {
         docker: "apregier/analyze_assemblies@sha256:edf94bd952180acb26423e9b0e583a8b00d658ac533634d59b32523cbd2a602a"
     }
     output {
-        File vcf = loose.genotyped.vcf.gz
-        File vcf_index = loose.genotyped.vcf.gz.tbi
+        File vcf = "loose.genotyped.vcf.gz"
+        File vcf_index = "loose.genotyped.vcf.gz.tbi"
     }
 }
 
