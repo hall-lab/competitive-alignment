@@ -101,10 +101,12 @@ task convert {
 task combine {
     input {
         Array[File] split_fastas
+        Array[File] split_marker_positions
     }
     command <<<
         set -exo pipefail
         cat ~{split_fastas} > combined.fasta
+        cat ~{split_marker_positions} > combined_marker_positions.txt
     >>>
     runtime {
         memory: "4G"
@@ -112,5 +114,6 @@ task combine {
     }
     output {
         File fasta = "combined.fasta"
+        File marker_positions = "combined_marker_positions.txt"
     }
 }
