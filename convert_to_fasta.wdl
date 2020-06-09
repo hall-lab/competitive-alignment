@@ -17,8 +17,8 @@ workflow ConvertToFasta {
         call convert {
             input:
                 region_file=region,
-                vcf=get_regions.vcf,
-                vcf_index=get_regions.vcf_index,
+                vcf=get_regions.filtered_vcf,
+                vcf_index=get_regions.filtered_vcf_index,
                 query=query,
                 ref=ref,
                 ref_name=ref_name
@@ -59,8 +59,8 @@ task get_regions {
     }
     output {
         Array[File] regions = read_lines("split_regions_files.txt")
-        File vcf = "tmp.vcf.gz"
-        File vcf_index = "tmp.vcf.gz.tbi"
+        File filtered_vcf = "tmp.vcf.gz"
+        File filtered_vcf_index = "tmp.vcf.gz.tbi"
     }
 }
 
