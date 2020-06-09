@@ -21,7 +21,7 @@ workflow CallAssemblyVariants {
         input:
             contigs=contigs2,
             ref=ref,
-            assembly_name=assembly_name,
+            assembly_name=assembly_name
     }
 
     call align_contigs align_contigs_to_each_other {
