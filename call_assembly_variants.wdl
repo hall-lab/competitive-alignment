@@ -33,14 +33,14 @@ workflow CallAssemblyVariants {
 
     call call_small_variants as call_small_variants1_ref {
         input:
-            alignment=align_contigs1_to_ref.bam,
+            alignment=align_contig1_to_ref.bam,
             ref=ref,
             assembly_name=assembly_name
     }
 
     call call_small_variants as call_small_variants2_ref {
         input:
-            alignment=align_contigs2_to_ref.bam,
+            alignment=align_contig2_to_ref.bam,
             ref=ref,
             assembly_name=assembly_name
     }
@@ -54,7 +54,7 @@ workflow CallAssemblyVariants {
 
     call call_sv as call_sv1_ref {
         input:
-            alignment=align_contigs1_to_ref.bam,
+            alignment=align_contig1_to_ref.bam,
             contigs=contigs1,
             ref=ref,
             assembly_name=assembly_name
@@ -62,7 +62,7 @@ workflow CallAssemblyVariants {
 
     call call_sv as call_sv2_ref {
         input:
-            alignment=align_contigs2_to_ref.bam,
+            alignment=align_contig2_to_ref.bam,
             contigs=contigs2,
             ref=ref,
             assembly_name=assembly_name
@@ -78,7 +78,7 @@ workflow CallAssemblyVariants {
 
     call convert_to_fasta.ConvertToFasta as convert_ref1 {
         input:
-            vcf=call_small_variants1_ref,
+            vcf=call_small_variants1_ref.vcf,
             query=contigs1,
             ref=ref,
             ref_name=ref_name
@@ -86,7 +86,7 @@ workflow CallAssemblyVariants {
 
     call convert_to_fasta.ConvertToFasta as convert_ref2 {
         input:
-            vcf=call_small_variants2_ref,
+            vcf=call_small_variants2_ref.vcf,
             query=contigs2,
             ref=ref,
             ref_name=ref_name,
@@ -94,7 +94,7 @@ workflow CallAssemblyVariants {
 
     call convert_to_fasta.ConvertToFasta as convert_self {
         input:
-            vcf=call_small_variants_self,
+            vcf=call_small_variants_self.vcf,
             query=contigs1,
             ref=contigs2,
             ref_name=assembly_name
