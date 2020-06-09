@@ -124,9 +124,9 @@ workflow CallAssemblyVariants {
     #}
 
     output {
-        small_variants = combine_small_variants.fasta
-        small_variants_marker_positions = combine_small_variants.marker_positions
-    #    sv = combine_sv.fasta
+        File small_variants = combine_small_variants.fasta
+        File small_variants_marker_positions = combine_small_variants.marker_positions
+    #   File sv = combine_sv.fasta
     }
 }
 
