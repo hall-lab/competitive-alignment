@@ -14,8 +14,7 @@ workflow CallAssemblyVariants {
     call align_contigs as align_contig1_to_ref {
         input:
             contigs=contigs1,
-            ref=ref,
-            assembly_name=assembly_name,
+            ref=ref
     }
 
     call align_contigs as align_contig2_to_ref {
@@ -148,7 +147,7 @@ task combine_sv {
         docker: "apregier/analyze_assemblies@sha256:edf94bd952180acb26423e9b0e583a8b00d658ac533634d59b32523cbd2a602a"
     }
     output {
-        File fasta = ~{assembly_name}.sv.combined.fasta
+        File fasta = "sv.combined.fasta"
     }
 }
 
@@ -171,16 +170,16 @@ task combine_small_variants {
         #combine fasta files and sort by sequence
         cat ~{small_variants1_ref} ~{small_variants2_ref} ~{small_variants_self} | paste - - - - | awk -v OFS="\t" -v FS="\t" '{print($2, $4, $1, $3)}' | sort | awk -v OFS="\n" -v FS="\t" '{print($3,$1,$4,$2)}' > tmp
         #find duplicate markers
-        $PYTHON $FIND_DUPS -i tmp > ~{assembly_name}.small_variants.combined.fasta
-        cat ~{small_variants1_ref_marker_positions} ~{small_variants2_ref_marker_positions} ~{small_variants_self_marker_positions} | sort -u > ~{assembly_name}.small_variants.marker_positions.txt
+        $PYTHON $FIND_DUPS -i tmp > small_variants.combined.fasta
+        cat ~{small_variants1_ref_marker_positions} ~{small_variants2_ref_marker_positions} ~{small_variants_self_marker_positions} | sort -u > small_variants.marker_positions.txt
     >>>
     runtime {
         memory: "64G"
         docker: "apregier/analyze_assemblies@sha256:edf94bd952180acb26423e9b0e583a8b00d658ac533634d59b32523cbd2a602a"
     }
     output {
-        File fasta = ~{assembly_name}.small_variants.combined.fasta
-        File marker_positions = ~{assembly_name}.small_variants.marker_positions.txt
+        File fasta = small_variants.combined.fasta
+        File marker_positions = small_variants.marker_positions.txt
     }
 }
 
@@ -203,19 +202,19 @@ task call_sv {
         GREP=/bin/grep
         ADD_ALIGNMENT_GAP_INFO=/opt/hall-lab/scripts/add_alignment_gap_info.pl
 
-        $SAMTOOLS sort -n T ~{assembly_name}.tmp -O bam ~{alignment} > ~{assembly_name}.namesorted.bam
-        $SAMTOOLS view -h -F 4 ~{assembly_name}.namesorted.bam | $PYTHON $SPLIT_TO_BEDPE -i stdin > ~{assembly_name}.bedpe
-        $PYTHON $BEDPE_TO_BKPTS -i ~{assembly_name}.bedpe -f ~{assembly_name} -q ~{contigs} -e ~{ref} > ~{assembly_name}.breakpoints.bedpe
-        $SVTOOLS bedpesort ~{assembly_name}.breakpoints.bedpe | $PERL $REARRANGE_BREAKPOINTS > ~{assembly_name}.breakpoints.sorted.bedpe
-        cat <($GREP "^#" ~{assembly_name}.breakpoints.sorted.bedpe) <(paste <($GREP -v "^#" ~{assembly_name}.breakpoints.sorted.bedpe | cut -f 1-6) <(paste -d : <($GREP -v "^#" ~{assembly_name}.breakpoints.sorted.bedpe | cut -f 7) <($GREP -v "^#" ~{assembly_name}.breakpoints.sorted.bedpe | cut -f 19 | sed 's/.*SVLEN=/SVLEN=/' | sed 's/;.*//')) <($GREP -v "^#" ~{assembly_name}.breakpoints.sorted.bedpe | cut -f 8-)) | $PERL $ADD_ALIGNMENT_GAP_INFO > ~{assembly_name}.breakpoints.sorted.fixed.bedpe
-    mv ~{assembly_name}.breakpoints.sorted.fixed.bedpe ~{assembly_name}.breakpoints.sorted.bedpe
+        $SAMTOOLS sort -n T tmp -O bam ~{alignment} > namesorted.bam
+        $SAMTOOLS view -h -F 4 namesorted.bam | $PYTHON $SPLIT_TO_BEDPE -i stdin > split.bedpe
+        $PYTHON $BEDPE_TO_BKPTS -i split.bedpe -f ~{assembly_name} -q ~{contigs} -e ~{ref} > breakpoints.bedpe
+        $SVTOOLS bedpesort breakpoints.bedpe | $PERL $REARRANGE_BREAKPOINTS > breakpoints.sorted.bedpe
+        cat <($GREP "^#" breakpoints.sorted.bedpe) <(paste <($GREP -v "^#" breakpoints.sorted.bedpe | cut -f 1-6) <(paste -d : <($GREP -v "^#" breakpoints.sorted.bedpe | cut -f 7) <($GREP -v "^#" breakpoints.sorted.bedpe | cut -f 19 | sed 's/.*SVLEN=/SVLEN=/' | sed 's/;.*//')) <($GREP -v "^#" breakpoints.sorted.bedpe | cut -f 8-)) | $PERL $ADD_ALIGNMENT_GAP_INFO > breakpoints.sorted.fixed.bedpe
+    mv breakpoints.sorted.fixed.bedpe breakpoints.sorted.bedpe
     >>>
     runtime {
         memory: "64G"
         docker: "apregier/analyze_assemblies@sha256:edf94bd952180acb26423e9b0e583a8b00d658ac533634d59b32523cbd2a602a"
     }
     output {
-        File bedpe = ~{assembly_name}.breakpoints.sorted.bedpe
+        File bedpe = breakpoints.sorted.bedpe
     }
 }
 
@@ -237,9 +236,9 @@ task call_small_variants {
         PERL=/usr/bin/perl
         GENOTYPE_VCF=/opt/hall-lab/scripts/vcfToGenotyped.pl
         TABIX=/opt/hall-lab/htslib-1.9/bin/tabix
-        $SAMTOOLS view -h ~{alignment} | $K8 $PAFTOOLS sam2paf - | sort -k6,6 -k8,8n | $K8 $PAFTOOLS call -l 1 -L 1 -q 0 - | grep "^V" | sort -V | $BGZIP -c > ~{assembly_name}.loose.vcf.txt.gz
-        $PYTHON $VAR_TO_VCF -i <(zcat ~{assembly_name}.loose.var.txt.gz) -r ~{ref} -s ~{assembly_name} -o ~{assembly_name}.loose.vcf
-        $SVTOOLS vcfsort ~{assembly_name}.loose.vcf | $PERL $GENOTYPE_VCF | $BGZIP -c > ~{assembly_name}.loose.genotyped.vcf.gz
+        $SAMTOOLS view -h ~{alignment} | $K8 $PAFTOOLS sam2paf - | sort -k6,6 -k8,8n | $K8 $PAFTOOLS call -l 1 -L 1 -q 0 - | grep "^V" | sort -V | $BGZIP -c > loose.vcf.txt.gz
+        $PYTHON $VAR_TO_VCF -i <(zcat loose.var.txt.gz) -r ~{ref} -s ~{assembly_name} -o loose.vcf
+        $SVTOOLS vcfsort loose.vcf | $PERL $GENOTYPE_VCF | $BGZIP -c > loose.genotyped.vcf.gz
         $TABIX -f -p vcf $OUTPUT_PREFIX.loose.genotyped.vcf.gz
     >>>
     runtime {
@@ -247,8 +246,8 @@ task call_small_variants {
         docker: "apregier/analyze_assemblies@sha256:edf94bd952180acb26423e9b0e583a8b00d658ac533634d59b32523cbd2a602a"
     }
     output {
-        File vcf = ~{assembly_name}.loose.genotyped.vcf.gz
-        File vcf_index = ~{assembly_name}.loose.genotyped.vcf.gz.tbi
+        File vcf = loose.genotyped.vcf.gz
+        File vcf_index = loose.genotyped.vcf.gz.tbi
     }
 }
 
@@ -256,19 +255,18 @@ task align_contigs {
     input {
             File contigs
             File ref
-            String assembly_name
     }
     command <<<
         set -exo pipefail
         MINIMAP2=/opt/hall-lab/minimap2/minimap2
         SAMTOOLS=/opt/hall-lab/samtools-1.9/bin/samtools
-        $MINIMAP2 -ax asm5 -L --cs ~{ref} ~{contigs} | $SAMTOOLS sort -T ~{assembly_name}.tmp -O bam - > ~{assembly_name}.bam
+        $MINIMAP2 -ax asm5 -L --cs ~{ref} ~{contigs} | $SAMTOOLS sort -T tmp -O bam - > aligned.bam
     >>>
     runtime {
         memory: "64G"
         docker: "apregier/analyze_assemblies@sha256:edf94bd952180acb26423e9b0e583a8b00d658ac533634d59b32523cbd2a602a"
     }
     output {
-        File bam = ~{assembly_name}.bam
+        File bam = aligned.bam
     }
 }
