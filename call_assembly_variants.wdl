@@ -178,8 +178,8 @@ task combine_small_variants {
         docker: "apregier/analyze_assemblies@sha256:edf94bd952180acb26423e9b0e583a8b00d658ac533634d59b32523cbd2a602a"
     }
     output {
-        File fasta = small_variants.combined.fasta
-        File marker_positions = small_variants.marker_positions.txt
+        File fasta = "small_variants.combined.fasta"
+        File marker_positions = "small_variants.marker_positions.txt"
     }
 }
 
@@ -214,7 +214,7 @@ task call_sv {
         docker: "apregier/analyze_assemblies@sha256:edf94bd952180acb26423e9b0e583a8b00d658ac533634d59b32523cbd2a602a"
     }
     output {
-        File bedpe = breakpoints.sorted.bedpe
+        File bedpe = "breakpoints.sorted.bedpe"
     }
 }
 
