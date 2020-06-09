@@ -1,4 +1,5 @@
 version 1.0
+import "convert_to_fasta.wdl" as convert_to_fasta
 
 workflow CallAssemblyVariants {
     input {
@@ -7,6 +8,7 @@ workflow CallAssemblyVariants {
         File contigs2
         File ref
         File ref_index
+        String ref_name
     }
 
     call align_contigs as align_contig1_to_ref {
@@ -75,32 +77,57 @@ workflow CallAssemblyVariants {
             assembly_name=assembly_name
     }
 
+    call convert_to_fasta.ConvertToFasta as convert_ref1 {
+        input:
+            vcf=call_small_variants1_ref,
+            query=contigs1,
+            ref=ref,
+            ref_name=ref_name
+    }
+
+    call convert_to_fasta.ConvertToFasta as convert_ref2 {
+        input:
+            vcf=call_small_variants2_ref,
+            query=contigs2,
+            ref=ref,
+            ref_name=ref_name,
+    }
+
+    call convert_to_fasta.ConvertToFasta as convert_self {
+        input:
+            vcf=call_small_variants_self,
+            query=contigs1,
+            ref=contigs2,
+            ref_name=assembly_name
+    }
+
     call combine_small_variants {
         input:
-            small_variants1_ref = call_small_variants1_ref.vcf,
-            small_variants1_ref_index = call_small_variants1_ref.vcf_index,
-            small_variants2_ref = call_small_variants2_ref.vcf,
-            small_variants2_ref_index = call_small_variants2_ref.vcf_index,
-            small_variants_self = call_small_variants_self.vcf,
-            small_variants_self_index = call_small_variants_self.vcf_index,
+            small_variants1_ref = convert_ref1.marker_fasta,
+            small_variants2_ref = convert_ref2.marker_fasta,
+            small_variants_self = convert_self.marker_fasta,
+            small_variants1_ref_marker_positions = convert_ref1.marker_positions,
+            small_variants2_ref_marker_positions = convert_ref2.marker_positions,
+            small_variants_self_marker_positions = convert_self.marker_positions,
             contigs1 = contigs1,
             contigs2 = contigs2,
             ref = ref
     }
 
-    call combine_sv {
-        input:
-            sv_ref1 = call_sv1_ref.bedpe,
-            sv_ref2 = call_sv2_ref.bedpe,
-            sv_self = call_sv_self.bedpe,
-            contigs1 = contigs1,
-            contigs2 = contigs2,
-            ref = ref
-    }
+    #call combine_sv {
+    #    input:
+    #        sv_ref1 = call_sv1_ref.bedpe,
+    #        sv_ref2 = call_sv2_ref.bedpe,
+    #        sv_self = call_sv_self.bedpe,
+    #        contigs1 = contigs1,
+    #        contigs2 = contigs2,
+    #        ref = ref
+    #}
 
     output {
         small_variants = combine_small_variants.fasta
-        sv = combine_sv.fasta
+        small_variants_marker_positions = combine_small_variants.marker_positions
+    #    sv = combine_sv.fasta
     }
 }
 
@@ -114,6 +141,7 @@ task combine_sv {
         File ref
     }
     command <<<
+    #TODO
     >>>
     runtime {
         memory: "64G"
@@ -127,16 +155,24 @@ task combine_sv {
 task combine_small_variants {
     input {
         File small_variants1_ref
-        File small_variants1_ref_index
         File small_variants2_ref
-        File small_variants2_ref_index
         File small_variants_self
-        File small_variants_self_index
+        File small_variants1_ref_marker_positions
+        File small_variants2_ref_marker_positions
+        File small_variants_self_marker_positions
         File contigs1
         File contigs2
         File ref
     }
     command <<<
+        set -exo pipefail
+        PYTHON=/opt/hall-lab/python-2.7.15/bin/python
+        FIND_DUPS=/storage1/fs1/ccdg/Active/analysis/ref_grant/assembly_analysis_20200220/multiple_competitive_alignment/find_duplicate_markers.py #TODO
+        #combine fasta files and sort by sequence
+        cat ~{small_variants1_ref} ~{small_variants2_ref} ~{small_variants_self} | paste - - - - | awk -v OFS="\t" -v FS="\t" '{print($2, $4, $1, $3)}' | sort | awk -v OFS="\n" -v FS="\t" '{print($3,$1,$4,$2)}' > tmp
+        #find duplicate markers
+        $PYTHON $FIND_DUPS -i tmp > ~{assembly_name}.small_variants.combined.fasta
+        cat ~{small_variants1_ref_marker_positions} ~{small_variants2_ref_marker_positions} ~{small_variants_self_marker_positions} | sort -u > ~{assembly_name}.small_variants.marker_positions.txt
     >>>
     runtime {
         memory: "64G"
@@ -144,6 +180,7 @@ task combine_small_variants {
     }
     output {
         File fasta = ~{assembly_name}.small_variants.combined.fasta
+        File marker_positions = ~{assembly_name}.small_variants.marker_positions.txt
     }
 }
 
