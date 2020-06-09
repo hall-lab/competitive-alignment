@@ -35,7 +35,7 @@ workflow CompetitiveGenotyping {
             input:
             dataset_name=dataset[0],
             dataset_fastq=dataset[1],
-            variant_fasta=merge_variants.fasta_representation
+            variant_fasta=merge_variants.fasta_representation,
             marker_positions=merge_variants.marker_positions
         }
     }
