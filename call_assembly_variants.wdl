@@ -79,6 +79,7 @@ workflow CallAssemblyVariants {
     call convert_to_fasta.ConvertToFasta as convert_ref1 {
         input:
             vcf=call_small_variants1_ref.vcf,
+            vcf_index=call_small_variants1_ref.vcf_index,
             query=contigs1,
             ref=ref,
             ref_name=ref_name
@@ -87,6 +88,7 @@ workflow CallAssemblyVariants {
     call convert_to_fasta.ConvertToFasta as convert_ref2 {
         input:
             vcf=call_small_variants2_ref.vcf,
+            vcf_index=call_small_variants2_ref.vcf_index,
             query=contigs2,
             ref=ref,
             ref_name=ref_name,
@@ -95,6 +97,7 @@ workflow CallAssemblyVariants {
     call convert_to_fasta.ConvertToFasta as convert_self {
         input:
             vcf=call_small_variants_self.vcf,
+            vcf_index=call_small_variants_self.vcf_index,
             query=contigs1,
             ref=contigs2,
             ref_name=assembly_name

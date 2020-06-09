@@ -3,6 +3,7 @@ version 1.0
 workflow ConvertToFasta {
     input {
         File vcf
+        File vcf_index
         File query
         File ref
         File ref_name
@@ -10,7 +11,8 @@ workflow ConvertToFasta {
 
     call get_regions {
         input:
-            vcf=vcf
+            vcf=vcf,
+            vcf_index=vcf_index
     }
 
     scatter (region in get_regions.regions) {
@@ -40,6 +42,7 @@ workflow ConvertToFasta {
 task get_regions {
     input {
         File vcf
+        File vcf_index
     }
     command <<<
         set -exo pipefail
