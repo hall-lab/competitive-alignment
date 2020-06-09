@@ -5,11 +5,13 @@ import "genotype_markers.wdl" as genotype
 workflow CompetitiveGenotyping {
     input {
         File assembly_list
+        File dataset_list
         File ref
         File ref_index
         String ref_name
     }
     Array[Array[File]] assemblies = read_tsv(assembly_list)
+    Array[Array[File]] datasets = read_tsv(dataset_list)
 
     scatter (assembly in assemblies) {
         call call_variants.CallAssemblyVariants as call_variants {
