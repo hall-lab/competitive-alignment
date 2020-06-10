@@ -152,7 +152,6 @@ task index_fasta {
         SAMTOOLS=/opt/hall-lab/samtools-1.9/bin/samtools
         zcat ~{fasta} | $BGZIP -c > bgzipped.fa.gz
         $SAMTOOLS faidx bgzipped.fa.gz
-    >>>
     runtime {
         memory: "4G"
         docker: "apregier/analyze_assemblies@sha256:edf94bd952180acb26423e9b0e583a8b00d658ac533634d59b32523cbd2a602a"
