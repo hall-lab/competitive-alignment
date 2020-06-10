@@ -29,10 +29,16 @@ workflow CallAssemblyVariants {
             ref=contigs2
     }
 
+    call index_fasta as index_contigs2 {
+        input:
+            fasta=contigs2
+    }
+
     call call_small_variants as call_small_variants1_ref {
         input:
             alignment=align_contig1_to_ref.bam,
             ref=ref,
+            ref_index=ref_index,
             assembly_name=assembly_name
     }
 
@@ -40,13 +46,15 @@ workflow CallAssemblyVariants {
         input:
             alignment=align_contig2_to_ref.bam,
             ref=ref,
+            ref_index=ref_index,
             assembly_name=assembly_name
     }
 
     call call_small_variants as call_small_variants_self {
         input:
             alignment=align_contigs_to_each_other.bam,
-            ref=contigs2,
+            ref=index_contigs2.bgzipped_fasta,
+            ref_index=index_contigs2.fasta_index,
             assembly_name=assembly_name
     }
 
@@ -66,11 +74,6 @@ workflow CallAssemblyVariants {
             ref=ref,
             ref_index=ref_index,
             assembly_name=assembly_name
-    }
-
-    call index_fasta as index_contigs2 {
-        input:
-            fasta=contigs2
     }
 
     call call_sv as call_sv_self {
@@ -146,7 +149,8 @@ task index_fasta {
     command <<<
         set -exo pipefail
         BGZIP=/opt/hall-lab/htslib-1.9/bin/bgzip
-        cat ~{fasta} | $BGZIP -c > bgzipped.fa.gz
+        SAMTOOLS=/opt/hall-lab/samtools-1.9/bin/samtools
+        zcat ~{fasta} | $BGZIP -c > bgzipped.fa.gz
         $SAMTOOLS faidx bgzipped.fa.gz
     >>>
     runtime {
@@ -252,6 +256,7 @@ task call_small_variants {
     input {
         File alignment
         File ref
+        File ref_index
         String assembly_name
     }
     command <<<
