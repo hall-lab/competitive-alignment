@@ -55,6 +55,7 @@ workflow CallAssemblyVariants {
             alignment=align_contig1_to_ref.bam,
             contigs=contigs1,
             ref=ref,
+            ref_index=ref_index,
             assembly_name=assembly_name
     }
 
@@ -63,14 +64,21 @@ workflow CallAssemblyVariants {
             alignment=align_contig2_to_ref.bam,
             contigs=contigs2,
             ref=ref,
+            ref_index=ref_index,
             assembly_name=assembly_name
+    }
+
+    call index_fasta as index_contigs2 {
+        input:
+            fasta=contigs2
     }
 
     call call_sv as call_sv_self {
         input:
             alignment=align_contigs_to_each_other.bam,
             contigs=contigs1,
-            ref=contigs2,
+            ref=index_contigs2.bgzipped_fasta,
+            ref_index=index_contigs2.fasta_index,
             assembly_name=assembly_name
     }
 
@@ -128,6 +136,26 @@ workflow CallAssemblyVariants {
         File small_variants = combine_small_variants.fasta
         File small_variants_marker_positions = combine_small_variants.marker_positions
     #   File sv = combine_sv.fasta
+    }
+}
+
+task index_fasta {
+    input {
+        File fasta
+    }
+    command <<<
+        set -exo pipefail
+        BGZIP=/opt/hall-lab/htslib-1.9/bin/bgzip
+        cat ~{fasta} | $BGZIP -c > bgzipped.fa.gz
+        $SAMTOOLS faidx bgzipped.fa.gz
+    >>>
+    runtime {
+        memory: "4G"
+        docker: "apregier/analyze_assemblies@sha256:edf94bd952180acb26423e9b0e583a8b00d658ac533634d59b32523cbd2a602a"
+    }
+    output {
+        File bgzipped_fasta = "bgzipped.fa.gz"
+        File fasta_index = "bgzipped.fa.gz.fai"
     }
 }
 
@@ -189,6 +217,7 @@ task call_sv {
         File alignment
         File contigs
         File ref
+        File ref_index
         String assembly_name
     }
     command <<<
