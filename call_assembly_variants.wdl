@@ -42,7 +42,7 @@ workflow CallAssemblyVariants {
             ref=ref,
             assembly_name=assembly_name
     }
-    
+
     call call_small_variants as call_small_variants_self {
         input:
             alignment=align_contigs_to_each_other.bam,
