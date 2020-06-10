@@ -269,7 +269,7 @@ task call_small_variants {
         $SAMTOOLS view -h ~{alignment} | $K8 $PAFTOOLS sam2paf - | sort -k6,6 -k8,8n | $K8 $PAFTOOLS call -l 1 -L 1 -q 0 - | grep "^V" | sort -V | $BGZIP -c > loose.var.txt.gz
         $PYTHON $VAR_TO_VCF -i <(zcat loose.var.txt.gz) -r ~{ref} -s ~{assembly_name} -o loose.vcf
         $SVTOOLS vcfsort loose.vcf | $PERL $GENOTYPE_VCF | $BGZIP -c > loose.genotyped.vcf.gz
-        $TABIX -f -p vcf $OUTPUT_PREFIX.loose.genotyped.vcf.gz
+        $TABIX -f -p vcf loose.genotyped.vcf.gz
     >>>
     runtime {
         memory: "64G"
