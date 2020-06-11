@@ -58,7 +58,7 @@ task get_regions {
     >>>
     runtime {
         memory: "4G"
-        docker: "apregier/analyze_assemblies@sha256:edf94bd952180acb26423e9b0e583a8b00d658ac533634d59b32523cbd2a602a"
+        docker: "apregier/bcftools_samtools@sha256:49dc9b0b9419281b87df4a9faf9ca6681725317108bca66ba37f9bd1d86e9de2"
     }
     output {
         Array[File] regions = read_lines("split_regions_files.txt")
