@@ -53,7 +53,7 @@ workflow CallAssemblyVariants {
     call call_small_variants as call_small_variants_self {
         input:
             alignment=align_contigs_to_each_other.bam,
-            ref=index_contigs2.bgzipped_fasta,
+            ref=index_contigs2.unzipped_fasta,
             ref_index=index_contigs2.fasta_index,
             assembly_name=assembly_name
     }
@@ -80,7 +80,7 @@ workflow CallAssemblyVariants {
         input:
             alignment=align_contigs_to_each_other.bam,
             contigs=contigs1,
-            ref=index_contigs2.bgzipped_fasta,
+            ref=index_contigs2.unzipped_fasta,
             ref_index=index_contigs2.fasta_index,
             assembly_name=assembly_name
     }
@@ -148,18 +148,17 @@ task index_fasta {
     }
     command <<<
         set -exo pipefail
-        BGZIP=/opt/hall-lab/htslib-1.9/bin/bgzip
         SAMTOOLS=/opt/hall-lab/samtools-1.9/bin/samtools
-        zcat ~{fasta} | $BGZIP -c > bgzipped.fa.gz
-        $SAMTOOLS faidx bgzipped.fa.gz
+        zcat ~{fasta} > unzipped.fa
+        $SAMTOOLS faidx unzipped.fa
     >>>
     runtime {
         memory: "4G"
         docker: "apregier/analyze_assemblies@sha256:edf94bd952180acb26423e9b0e583a8b00d658ac533634d59b32523cbd2a602a"
     }
     output {
-        File bgzipped_fasta = "bgzipped.fa.gz"
-        File fasta_index = "bgzipped.fa.gz.fai"
+        File unzipped_fasta = "unzipped.fa"
+        File fasta_index = "unzipped.fa.fai"
     }
 }
 
@@ -236,9 +235,11 @@ task call_sv {
         GREP=/bin/grep
         ADD_ALIGNMENT_GAP_INFO=/opt/hall-lab/scripts/add_alignment_gap_info.pl
 
+        ln -s ~{ref} ref.fa
+        ln -s ~{ref_index} ref.fa.fai
         $SAMTOOLS sort -n -T tmp -O bam ~{alignment} > namesorted.bam
         $SAMTOOLS view -h -F 4 namesorted.bam | $PYTHON $SPLIT_TO_BEDPE -i stdin > split.bedpe
-        $PYTHON $BEDPE_TO_BKPTS -i split.bedpe -f ~{assembly_name} -q ~{contigs} -e ~{ref} > breakpoints.bedpe
+        $PYTHON $BEDPE_TO_BKPTS -i split.bedpe -f ~{assembly_name} -q ~{contigs} -e ref.fa > breakpoints.bedpe
         $SVTOOLS bedpesort breakpoints.bedpe | $PERL $REARRANGE_BREAKPOINTS > breakpoints.sorted.bedpe
         cat <($GREP "^#" breakpoints.sorted.bedpe) <(paste <($GREP -v "^#" breakpoints.sorted.bedpe | cut -f 1-6) <(paste -d : <($GREP -v "^#" breakpoints.sorted.bedpe | cut -f 7) <($GREP -v "^#" breakpoints.sorted.bedpe | cut -f 19 | sed 's/.*SVLEN=/SVLEN=/' | sed 's/;.*//')) <($GREP -v "^#" breakpoints.sorted.bedpe | cut -f 8-)) | $PERL $ADD_ALIGNMENT_GAP_INFO > breakpoints.sorted.fixed.bedpe
     mv breakpoints.sorted.fixed.bedpe breakpoints.sorted.bedpe
@@ -271,8 +272,10 @@ task call_small_variants {
         PERL=/usr/bin/perl
         GENOTYPE_VCF=/opt/hall-lab/scripts/vcfToGenotyped.pl
         TABIX=/opt/hall-lab/htslib-1.9/bin/tabix
+        ln -s ~{ref} ref.fa
+        ln -s ~{ref_index} ref.fa.fai
         $SAMTOOLS view -h ~{alignment} | $K8 $PAFTOOLS sam2paf - | sort -k6,6 -k8,8n | $K8 $PAFTOOLS call -l 1 -L 1 -q 0 - | grep "^V" | sort -V | $BGZIP -c > loose.var.txt.gz
-        $PYTHON $VAR_TO_VCF -i <(zcat loose.var.txt.gz) -r ~{ref} -s ~{assembly_name} -o loose.vcf
+        $PYTHON $VAR_TO_VCF -i <(zcat loose.var.txt.gz) -r ref.fa -s ~{assembly_name} -o loose.vcf
         $SVTOOLS vcfsort loose.vcf | $PERL $GENOTYPE_VCF | $BGZIP -c > loose.genotyped.vcf.gz
         $TABIX -f -p vcf loose.genotyped.vcf.gz
     >>>
