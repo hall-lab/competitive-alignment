@@ -29,6 +29,11 @@ workflow CallAssemblyVariants {
             ref=contigs2
     }
 
+    call index_fasta as index_contigs1 {
+        input:
+            fasta=contigs1
+    }
+
     call index_fasta as index_contigs2 {
         input:
             fasta=contigs2
@@ -61,7 +66,8 @@ workflow CallAssemblyVariants {
     call call_sv as call_sv1_ref {
         input:
             alignment=align_contig1_to_ref.bam,
-            contigs=contigs1,
+            contigs=index_contigs1.unzipped_fasta,
+            contigs_index=index_contigs1.fasta_index,
             ref=ref,
             ref_index=ref_index,
             assembly_name=assembly_name
@@ -70,7 +76,8 @@ workflow CallAssemblyVariants {
     call call_sv as call_sv2_ref {
         input:
             alignment=align_contig2_to_ref.bam,
-            contigs=contigs2,
+            contigs=index_contigs2.unzipped_fasta,
+            contigs_index=index_contigs2.fasta_index,
             ref=ref,
             ref_index=ref_index,
             assembly_name=assembly_name
@@ -79,7 +86,8 @@ workflow CallAssemblyVariants {
     call call_sv as call_sv_self {
         input:
             alignment=align_contigs_to_each_other.bam,
-            contigs=contigs1,
+            contigs=index_contigs1.unzipped_fasta,
+            contigs_index=index_contigs1.fasta_index,
             ref=index_contigs2.unzipped_fasta,
             ref_index=index_contigs2.fasta_index,
             assembly_name=assembly_name
@@ -219,6 +227,7 @@ task call_sv {
     input {
         File alignment
         File contigs
+        File contigs_index
         File ref
         File ref_index
         String assembly_name
@@ -235,11 +244,13 @@ task call_sv {
         GREP=/bin/grep
         ADD_ALIGNMENT_GAP_INFO=/opt/hall-lab/scripts/add_alignment_gap_info.pl
 
+        ln -s ~{contigs} contigs.fa
+        ln -s ~{contigs_index} contigs.fa.fai
         ln -s ~{ref} ref.fa
         ln -s ~{ref_index} ref.fa.fai
         $SAMTOOLS sort -n -T tmp -O bam ~{alignment} > namesorted.bam
         $SAMTOOLS view -h -F 4 namesorted.bam | $PYTHON $SPLIT_TO_BEDPE -i stdin > split.bedpe
-        $PYTHON $BEDPE_TO_BKPTS -i split.bedpe -f ~{assembly_name} -q ~{contigs} -e ref.fa > breakpoints.bedpe
+        $PYTHON $BEDPE_TO_BKPTS -i split.bedpe -f ~{assembly_name} -q contigs.fa -e ref.fa > breakpoints.bedpe
         $SVTOOLS bedpesort breakpoints.bedpe | $PERL $REARRANGE_BREAKPOINTS > breakpoints.sorted.bedpe
         cat <($GREP "^#" breakpoints.sorted.bedpe) <(paste <($GREP -v "^#" breakpoints.sorted.bedpe | cut -f 1-6) <(paste -d : <($GREP -v "^#" breakpoints.sorted.bedpe | cut -f 7) <($GREP -v "^#" breakpoints.sorted.bedpe | cut -f 19 | sed 's/.*SVLEN=/SVLEN=/' | sed 's/;.*//')) <($GREP -v "^#" breakpoints.sorted.bedpe | cut -f 8-)) | $PERL $ADD_ALIGNMENT_GAP_INFO > breakpoints.sorted.fixed.bedpe
     mv breakpoints.sorted.fixed.bedpe breakpoints.sorted.bedpe
