@@ -6,6 +6,7 @@ workflow ConvertToFasta {
         File vcf_index
         File query
         File ref
+        File ref_index
         File ref_name
     }
 
@@ -23,6 +24,7 @@ workflow ConvertToFasta {
                 vcf_index=get_regions.filtered_vcf_index,
                 query=query,
                 ref=ref,
+                ref_index=ref_index,
                 ref_name=ref_name
         }
     }
@@ -74,6 +76,7 @@ task convert {
         File vcf_index
         File query
         File ref
+        File ref_index
         String ref_name
     }
     command <<<
@@ -83,10 +86,12 @@ task convert {
         SAMTOOLS=/opt/hall-lab/samtools-1.9/bin/samtools
         OUT="split.fasta"
         MARKERS="split.marker_positions"
+        ln -s ~{ref} ref.fa
+        ln -s ~{ref_index} ref.fa.fai
         regions=`cat ~{region_file}`
         for region in $regions; do
-            $SAMTOOLS faidx ~{ref} $region | $BCFTOOLS consensus ~{vcf} | sed 's/^>/>alt_~{ref_name}_/' >> $OUT
-            $SAMTOOLS faidx ~{ref} $region | sed 's/^>/>ref_~{ref_name}_/' >> $OUT
+            $SAMTOOLS faidx ref.fa $region | $BCFTOOLS consensus ~{vcf} | sed 's/^>/>alt_~{ref_name}_/' >> $OUT
+            $SAMTOOLS faidx ref.fa $region | sed 's/^>/>ref_~{ref_name}_/' >> $OUT
             echo "ref_~{ref_name}_$region	100	ref_~{ref_name}_$region	~{ref_name}_$region	r" >> $MARKERS
             echo "alt_~{ref_name}_$region	100	alt_~{ref_name}_$region	~{ref_name}_$region	a" >> $MARKERS ##TODO double check 100 or 101?
         done

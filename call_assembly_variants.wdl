@@ -99,6 +99,7 @@ workflow CallAssemblyVariants {
             vcf_index=call_small_variants1_ref.vcf_index,
             query=contigs1,
             ref=ref,
+            ref_index=ref_index,
             ref_name=ref_name
     }
 
@@ -108,6 +109,7 @@ workflow CallAssemblyVariants {
             vcf_index=call_small_variants2_ref.vcf_index,
             query=contigs2,
             ref=ref,
+            ref_index=ref_index,
             ref_name=ref_name,
     }
 
@@ -116,7 +118,8 @@ workflow CallAssemblyVariants {
             vcf=call_small_variants_self.vcf,
             vcf_index=call_small_variants_self.vcf_index,
             query=contigs1,
-            ref=contigs2,
+            ref=index_contigs2.unzipped_fasta,
+            ref_index=index_contigs2.fasta_index,
             ref_name=assembly_name
     }
 
