@@ -98,7 +98,7 @@ task convert {
     >>>
     runtime {
         memory: "4G"
-        docker: "apregier/bcftools_samtools:latest"
+        docker: "apregier/bcftools_samtools@sha256:49dc9b0b9419281b87df4a9faf9ca6681725317108bca66ba37f9bd1d86e9de2"
     }
     output {
         File fasta = "split.fasta"
