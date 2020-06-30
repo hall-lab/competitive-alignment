@@ -52,7 +52,7 @@ task get_regions {
         TABIX=/opt/hall-lab/htslib-1.9/bin/tabix
         PERL=/usr/bin/perl
         PRINT_REGIONS=/storage1/fs1/ccdg/Active/analysis/ref_grant/assembly_analysis_20200220/multiple_competitive_alignment/printRegions2.pl #TODO
-        $BCFTOOLS view -v snps ~{vcf} -o tmp.vcf.gz -O z
+        $BCFTOOLS view -m2 -M2 -v snps ~{vcf} -o tmp.vcf.gz -O z
         $TABIX -fp vcf tmp.vcf.gz
         zcat tmp.vcf.gz | $BCFTOOLS query -f '%CHROM\t%POS\n' | $PERL $PRINT_REGIONS > regions.txt
         split -l 5000 -a 3 -d regions.txt regions.sub
