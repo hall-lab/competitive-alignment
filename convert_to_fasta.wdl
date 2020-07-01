@@ -113,8 +113,8 @@ task combine {
     }
     command <<<
         set -exo pipefail
-        cat ~{split_fastas} > combined.fasta
-        cat ~{split_marker_positions} > combined_marker_positions.txt
+        cat ~{sep=" " split_fastas} > combined.fasta
+        cat ~{sep=" " split_marker_positions} > combined_marker_positions.txt
     >>>
     runtime {
         memory: "4G"
