@@ -211,7 +211,7 @@ task combine_small_variants {
         PYTHON=/opt/hall-lab/python-2.7.15/bin/python
         FIND_DUPS=/storage1/fs1/ccdg/Active/analysis/ref_grant/assembly_analysis_20200220/multiple_competitive_alignment/find_duplicate_markers.py #TODO
         #combine fasta files and sort by sequence
-        cat ~{small_variants1_ref} ~{small_variants2_ref} ~{small_variants_self} | paste - - - - | awk -v OFS="\t" -v FS="\t" '{print($2, $4, $1, $3)}' | sort | awk -v OFS="\n" -v FS="\t" '{print($3,$1,$4,$2)}' > tmp
+        cat ~{small_variants1_ref} ~{small_variants2_ref} ~{small_variants_self} | awk '/^>/ {printf("\n%s\n",$0);next; } { printf("%s",$0);}  END {printf("\n");}' | grep -v "^$" | paste - - - - | awk -v OFS="\t" -v FS="\t" '{print($2, $4, $1, $3)}' | sort | awk -v OFS="\n" -v FS="\t" '{print($3,$1,$4,$2)}' > tmp
         #find duplicate markers
         $PYTHON $FIND_DUPS -i tmp > small_variants.combined.fasta
         cat ~{small_variants1_ref_marker_positions} ~{small_variants2_ref_marker_positions} ~{small_variants_self_marker_positions} | sort -u > small_variants.marker_positions.txt
