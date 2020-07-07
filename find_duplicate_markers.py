@@ -39,7 +39,7 @@ def process_fasta(fasta_file):
     for duplicate_set in duplicates.values():
         for duplicate in duplicate_set:
             fasta_to_remove.add(duplicate)
-
+    print("{} duplicate sequences removed".format([str(len(fasta_to_remove))]), file=sys.stderr)
     with open(fasta_file, "r") as fa:
         lines = []
         for line in fa:
