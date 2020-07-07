@@ -4,10 +4,14 @@ from optparse import OptionParser
 
 duplicates = {}
 def add_duplicates(current_marker, previous_marker):
-    sequence = "{}.{}".format(previous_marker[1], previous_marker[3])
-    if sequence in duplicates:
-        duplicates[sequence].add(current_marker[0])
-        duplicates[sequence].add(current_marker[2])
+    sequence1 = "{}.{}".format(previous_marker[1], previous_marker[3])
+    sequence2 = "{}.{}".format(previous_marker[3], previous_marker[1])
+    if sequence1 in duplicates:
+        duplicates[sequence1].add(current_marker[0])
+        duplicates[sequence1].add(current_marker[2])
+    elif sequence2 in duplicates:
+        duplicates[sequence2].add(current_marker[0])
+        duplicates[sequence2].add(current_marker[2])
     else:
         duplicates[sequence] = set([current_marker[0], current_marker[2]])
 
