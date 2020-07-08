@@ -5,14 +5,10 @@ from optparse import OptionParser
 
 duplicates = {}
 def add_duplicates(current_marker, previous_marker):
-    sequence1 = "{}.{}".format(previous_marker[1], previous_marker[3])
-    sequence2 = "{}.{}".format(previous_marker[3], previous_marker[1])
-    if sequence1 in duplicates:
-        duplicates[sequence1].add(current_marker[0])
-        duplicates[sequence1].add(current_marker[2])
-    elif sequence2 in duplicates:
-        duplicates[sequence2].add(current_marker[0])
-        duplicates[sequence2].add(current_marker[2])
+    sequence = "{}.{}".format(previous_marker[1], previous_marker[3])
+    if sequence in duplicates:
+        duplicates[sequence].add(current_marker[0])
+        duplicates[sequence].add(current_marker[2])
     else:
         duplicates[sequence] = set([current_marker[0], current_marker[2]])
 
@@ -40,7 +36,7 @@ def process_fasta(fasta_file):
     for duplicate_set in duplicates.values():
         for duplicate in duplicate_set:
             fasta_to_remove.add(duplicate)
-    print("{} duplicate sequences removed".format([str(len(fasta_to_remove))]), file=sys.stderr)
+    print("{} duplicate sequences removed".format(str(len(fasta_to_remove))), file=sys.stderr)
     with open(fasta_file, "r") as fa:
         lines = []
         for line in fa:
