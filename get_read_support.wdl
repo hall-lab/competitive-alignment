@@ -155,9 +155,8 @@ task collate_read_support {
         PYTHON=/opt/hall-lab/python-2.7.15/bin/python
         BEDTOOLS=/opt/hall-lab/bedtools
         FILTER_SUPPORT_SCRIPT=/storage1/fs1/ccdg/Active/analysis/ref_grant/assembly_analysis_20200220/multiple_competitive_alignment/filter_support.py #TODO
-        echo "rev2"
         join <(cat ~{contig_support} | sed 's/\t/ /' | sort) <(cat ~{ref_support} | sed 's/\t/ /' | sort) | sed 's/ /\t/' > collated.txt
-        $PYTHON $FILTER_SUPPORT_SCRIPT -i collated.txt | sort | $BEDTOOLS groupby -g 1 -c 3,5 -o sum,sum > support.txt
+        $PYTHON $FILTER_SUPPORT_SCRIPT -i collated.txt | sort | $BEDTOOLS groupby -g 1 -c 3,6 -o sum,sum > support.txt
     >>>
     runtime {
         memory: "32G"
