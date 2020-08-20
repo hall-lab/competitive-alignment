@@ -9,6 +9,7 @@ workflow CompetitiveGenotyping {
         File ref
         File ref_index
         String ref_name
+        File fastq_list
     }
     Array[Array[File]] assemblies = read_tsv(assembly_list)
     Array[Array[File]] datasets = read_tsv(dataset_list)
@@ -21,7 +22,8 @@ workflow CompetitiveGenotyping {
             contigs2=assembly[2],
             ref=ref,
             ref_index=ref_index,
-            ref_name=ref_name
+            ref_name=ref_name,
+            fastq_list=fastq_list
         }
     }
 
@@ -61,7 +63,7 @@ task merge_variants {
         cat ~{sep=" " small_variants_marker_positions} | sort -u > marker_positions.txt
     >>>
     runtime {
-        docker: "apregier/analyze_assemblies@sha256:edf94bd952180acb26423e9b0e583a8b00d658ac533634d59b32523cbd2a602a"
+        docker: "apregier/analyze_assemblies@sha256:5cbac56b15b739783c37d2a92261bef138d5bae3e99171557df06d3e39cb485a"
         memory: "64 GB"
     }
     output {

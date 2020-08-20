@@ -38,7 +38,7 @@ task align_dataset {
     >>>
     runtime {
         memory: "32G"
-        docker: "apregier/analyze_assemblies@sha256:edf94bd952180acb26423e9b0e583a8b00d658ac533634d59b32523cbd2a602a"
+        docker: "apregier/analyze_assemblies@sha256:5cbac56b15b739783c37d2a92261bef138d5bae3e99171557df06d3e39cb485a"
     }
     output {
         File alignment="alignment.paf"
@@ -59,7 +59,7 @@ task genotype {
     >>>
     runtime {
         memory: "4G"
-        docker: "apregier/analyze_assemblies@sha256:edf94bd952180acb26423e9b0e583a8b00d658ac533634d59b32523cbd2a602a"
+        docker: "apregier/analyze_assemblies@sha256:5cbac56b15b739783c37d2a92261bef138d5bae3e99171557df06d3e39cb485a"
     }
     output {
         File marker_counts="marker_counts.txt"

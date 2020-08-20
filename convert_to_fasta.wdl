@@ -4,7 +4,6 @@ workflow ConvertToFasta {
     input {
         File vcf
         File vcf_index
-        File query
         File ref
         File ref_index
         File ref_name
@@ -22,7 +21,6 @@ workflow ConvertToFasta {
                 region_file=region,
                 vcf=get_regions.filtered_vcf,
                 vcf_index=get_regions.filtered_vcf_index,
-                query=query,
                 ref=ref,
                 ref_index=ref_index,
                 ref_name=ref_name
@@ -55,7 +53,7 @@ task get_regions {
         $BCFTOOLS view -m2 -M2 -v snps ~{vcf} -o tmp.vcf.gz -O z
         $TABIX -fp vcf tmp.vcf.gz
         zcat tmp.vcf.gz | $BCFTOOLS query -f '%CHROM\t%POS\n' | $PERL $PRINT_REGIONS > regions.txt
-        split -l 5000 -a 3 -d regions.txt regions.sub
+        split -l 5000 -a 5 -d regions.txt regions.sub
         ls regions.sub* > split_regions_files.txt
     >>>
     runtime {
@@ -74,7 +72,6 @@ task convert {
         File region_file
         File vcf
         File vcf_index
-        File query
         File ref
         File ref_index
         String ref_name
@@ -118,7 +115,7 @@ task combine {
     >>>
     runtime {
         memory: "4G"
-        docker: "apregier/analyze_assemblies@sha256:edf94bd952180acb26423e9b0e583a8b00d658ac533634d59b32523cbd2a602a"
+        docker: "apregier/analyze_assemblies@sha256:5cbac56b15b739783c37d2a92261bef138d5bae3e99171557df06d3e39cb485a"
     }
     output {
         File fasta = "combined.fasta"

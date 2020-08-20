@@ -1,0 +1,12 @@
+{
+    "GetReadSupport.ref": "/storage1/fs1/ccdg/Active/analysis/ref_grant/assembly_analysis_20200220/GCA_000001405.15_GRCh38_no_alt_analysis_set.fna",
+    "GetReadSupport.contigs1": "/storage1/fs1/ccdg/Active/analysis/ref_grant/assembly_analysis_20200220/round1_assemblies/HG002-trio-r251/HG002-34X-r251.hap1.fa.gz",
+    "GetReadSupport.contigs2": "/storage1/fs1/ccdg/Active/analysis/ref_grant/assembly_analysis_20200220/round1_assemblies/HG002-trio-r251/HG002-34X-r251.hap2.fa.gz",
+    "GetReadSupport.reads_list": "/storage1/fs1/ccdg/Active/analysis/ref_grant/assembly_analysis_20200220/competitive_genotyping_round1/reads_list.txt",
+    "GetReadSupport.small_variants_ref_contigs1": "/scratch1/fs1/ccdg/aregier/ca_round1/cromwell-executions/CompetitiveGenotyping/5de34928-b3de-4357-aec0-f8a57a5031c1/call-call_variants/shard-0/CallAssemblyVariants/d5cfc52c-c89c-4f64-a429-e9f0e18ec4be/call-call_small_variants1_ref/execution/loose.genotyped.vcf.gz",
+    "GetReadSupport.small_variants_ref_contigs2": "/scratch1/fs1/ccdg/aregier/ca_round1/cromwell-executions/CompetitiveGenotyping/5de34928-b3de-4357-aec0-f8a57a5031c1/call-call_variants/shard-0/CallAssemblyVariants/d5cfc52c-c89c-4f64-a429-e9f0e18ec4be/call-call_small_variants2_ref/execution/loose.genotyped.vcf.gz",
+    "GetReadSupport.small_variants_contigs1_ref": "/scratch1/fs1/ccdg/aregier/ca_round1/cromwell-executions/CompetitiveGenotyping/5de34928-b3de-4357-aec0-f8a57a5031c1/call-call_variants/shard-0/CallAssemblyVariants/d5cfc52c-c89c-4f64-a429-e9f0e18ec4be/call-call_small_variants1_ref/execution/loose2.genotyped.vcf.gz",
+    "GetReadSupport.small_variants_contigs2_ref": "/scratch1/fs1/ccdg/aregier/ca_round1/cromwell-executions/CompetitiveGenotyping/5de34928-b3de-4357-aec0-f8a57a5031c1/call-call_variants/shard-0/CallAssemblyVariants/d5cfc52c-c89c-4f64-a429-e9f0e18ec4be/call-call_small_variants2_ref/execution/loose2.genotyped.vcf.gz",
+    "GetReadSupport.small_variants_contigs1_contigs2": "/scratch1/fs1/ccdg/aregier/ca_round1/cromwell-executions/CompetitiveGenotyping/5de34928-b3de-4357-aec0-f8a57a5031c1/call-call_variants/shard-0/CallAssemblyVariants/d5cfc52c-c89c-4f64-a429-e9f0e18ec4be/call-call_small_variants_self/execution/loose.genotyped.vcf.gz",
+    "GetReadSupport.small_variants_contigs2_contigs1": "/scratch1/fs1/ccdg/aregier/ca_round1/cromwell-executions/CompetitiveGenotyping/5de34928-b3de-4357-aec0-f8a57a5031c1/call-call_variants/shard-0/CallAssemblyVariants/d5cfc52c-c89c-4f64-a429-e9f0e18ec4be/call-call_small_variants_self/execution/loose2.genotyped.vcf.gz"
+}

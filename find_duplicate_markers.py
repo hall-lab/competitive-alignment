@@ -26,6 +26,7 @@ def process_fasta(fasta_file):
                 else:
                     previous_marker = current_marker
                     current_marker = lines
+                    print("{} {}".format(current_marker[3], previous_marker[3]), file=sys.stderr)
                     if current_marker[1] == previous_marker[1] and current_marker[3] == previous_marker[3]:
                         add_duplicates(current_marker, previous_marker)
                 lines = []

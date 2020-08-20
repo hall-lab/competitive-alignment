@@ -58,7 +58,6 @@ class ReadAlignments:
                             self.markers[base_marker_id] = set([newAlignment])
 
     def print_alignments(self):
-        markers_to_connect = set()
         markers = self.by_marker()
         for marker in markers:
             if marker.a != None and marker.r != None and marker.a.distance + marker.r.distance == 1:
