@@ -49,7 +49,7 @@ task get_regions {
         BCFTOOLS=/opt/hall-lab/bcftools-1.9/bin/bcftools
         TABIX=/opt/hall-lab/htslib-1.9/bin/tabix
         PERL=/usr/bin/perl
-        PRINT_REGIONS=/storage1/fs1/ccdg/Active/analysis/ref_grant/assembly_analysis_20200220/multiple_competitive_alignment/printRegions2.pl #TODO
+        PRINT_REGIONS=/opt/hall-lab/scripts/printRegions2.pl
         $BCFTOOLS view -m2 -M2 -v snps ~{vcf} -o tmp.vcf.gz -O z
         $TABIX -fp vcf tmp.vcf.gz
         zcat tmp.vcf.gz | $BCFTOOLS query -f '%CHROM\t%POS\n' | $PERL $PRINT_REGIONS > regions.txt
@@ -115,7 +115,7 @@ task combine {
     >>>
     runtime {
         memory: "4G"
-        docker: "apregier/analyze_assemblies@sha256:5cbac56b15b739783c37d2a92261bef138d5bae3e99171557df06d3e39cb485a"
+        docker: "apregier/analyze_assemblies@sha256:cae6b31b36f8f49fcd1fcba8ba18107d4e0d7ad967600514d292423300c52425"
     }
     output {
         File fasta = "combined.fasta"

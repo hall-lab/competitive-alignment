@@ -57,13 +57,13 @@ task merge_variants {
     }
     command <<<
         PYTHON=/opt/hall-lab/python-2.7.15/bin/python
-        FIND_DUPS=/storage1/fs1/ccdg/Active/analysis/ref_grant/assembly_analysis_20200220/multiple_competitive_alignment/find_duplicate_markers.py #TODO
+        FIND_DUPS=/opt/hall-lab/scripts/find_duplicate_markers.py
         cat ~{sep=" " small_variants} | paste - - - - | awk -v OFS="\t" -v FS="\t" '{if($2<$4) {print($2, $4, $1, $3)} else{print($4,$2,$3,$1)}}' | sort | awk -v OFS="\n" -v FS="\t" '{print($3,$1,$4,$2)}' > tmp
         $PYTHON $FIND_DUPS -i tmp > variants_merged.fasta
         cat ~{sep=" " small_variants_marker_positions} | sort -u > marker_positions.txt
     >>>
     runtime {
-        docker: "apregier/analyze_assemblies@sha256:5cbac56b15b739783c37d2a92261bef138d5bae3e99171557df06d3e39cb485a"
+        docker: "apregier/analyze_assemblies@sha256:cae6b31b36f8f49fcd1fcba8ba18107d4e0d7ad967600514d292423300c52425"
         memory: "64 GB"
     }
     output {

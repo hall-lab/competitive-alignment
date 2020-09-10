@@ -186,7 +186,7 @@ task index_fasta {
     >>>
     runtime {
         memory: "4G"
-        docker: "apregier/analyze_assemblies@sha256:f1e125e1261e163ef790ff11f3f2749f71427bf8f71ca95dd1894ce7c6c804eb"
+        docker: "apregier/analyze_assemblies@sha256:cae6b31b36f8f49fcd1fcba8ba18107d4e0d7ad967600514d292423300c52425"
     }
     output {
         File unzipped_fasta = "unzipped.fa"
@@ -208,7 +208,7 @@ task combine_sv {
     >>>
     runtime {
         memory: "64G"
-        docker: "apregier/analyze_assemblies@sha256:f1e125e1261e163ef790ff11f3f2749f71427bf8f71ca95dd1894ce7c6c804eb"
+        docker: "apregier/analyze_assemblies@sha256:cae6b31b36f8f49fcd1fcba8ba18107d4e0d7ad967600514d292423300c52425"
     }
     output {
         File fasta = "sv.combined.fasta"
@@ -269,7 +269,7 @@ task combine_small_variants {
     command <<<
         set -exo pipefail
         PYTHON=/opt/hall-lab/python-2.7.15/bin/python
-        FIND_DUPS=/storage1/fs1/ccdg/Active/analysis/ref_grant/assembly_analysis_20200220/multiple_competitive_alignment/find_duplicate_markers.py #TODO
+        FIND_DUPS=/opt/hall-lab/scripts/find_duplicate_markers.py
         #combine fasta files and sort by sequence
         cat ~{small_variants_ref} ~{small_variants_self} | awk '/^>/ {printf("\n%s\n",$0);next; } { printf("%s",$0);}  END {printf("\n");}' | grep -v "^$" | paste - - - - | awk -v OFS="\t" -v FS="\t" '{if($2<$4) {print($2, $4, $1, $3)} else{print($4,$2,$3,$1)}}' | sort | awk -v OFS="\n" -v FS="\t" '{print($3,$1,$4,$2)}' > tmp
         #find duplicate markers
@@ -278,7 +278,7 @@ task combine_small_variants {
     >>>
     runtime {
         memory: "64G"
-        docker: "apregier/analyze_assemblies@sha256:5cbac56b15b739783c37d2a92261bef138d5bae3e99171557df06d3e39cb485a"
+        docker: "apregier/analyze_assemblies@sha256:cae6b31b36f8f49fcd1fcba8ba18107d4e0d7ad967600514d292423300c52425"
     }
     output {
         File fasta = "small_variants.combined.fasta"
@@ -320,7 +320,7 @@ task call_sv {
     >>>
     runtime {
         memory: "64G"
-        docker: "apregier/analyze_assemblies@sha256:f1e125e1261e163ef790ff11f3f2749f71427bf8f71ca95dd1894ce7c6c804eb"
+        docker: "apregier/analyze_assemblies@sha256:cae6b31b36f8f49fcd1fcba8ba18107d4e0d7ad967600514d292423300c52425"
     }
     output {
         File bedpe = "breakpoints.sorted.bedpe"
@@ -358,7 +358,7 @@ task call_small_variants {
     >>>
     runtime {
         memory: "64G"
-        docker: "apregier/analyze_assemblies@sha256:5cbac56b15b739783c37d2a92261bef138d5bae3e99171557df06d3e39cb485a"
+        docker: "apregier/analyze_assemblies@sha256:cae6b31b36f8f49fcd1fcba8ba18107d4e0d7ad967600514d292423300c52425"
     }
     output {
         File vcf = "loose.genotyped.vcf.gz"
@@ -381,7 +381,7 @@ task align_contigs {
     >>>
     runtime {
         memory: "64G"
-        docker: "apregier/analyze_assemblies@sha256:f1e125e1261e163ef790ff11f3f2749f71427bf8f71ca95dd1894ce7c6c804eb"
+        docker: "apregier/analyze_assemblies@sha256:cae6b31b36f8f49fcd1fcba8ba18107d4e0d7ad967600514d292423300c52425"
     }
     output {
         File bam = "aligned.bam"

@@ -118,7 +118,7 @@ task align_source_reads {
     >>>
     runtime {
         memory: "32G"
-        docker: "apregier/analyze_assemblies@sha256:5cbac56b15b739783c37d2a92261bef138d5bae3e99171557df06d3e39cb485a"
+        docker: "apregier/analyze_assemblies@sha256:cae6b31b36f8f49fcd1fcba8ba18107d4e0d7ad967600514d292423300c52425"
     }
     output {
         File alignment="alignment.paf"
@@ -133,12 +133,12 @@ task get_read_support_small {
     command <<<
         set -exo pipefail
         PYTHON=/opt/hall-lab/python-2.7.15/bin/python
-        READ_COUNT_SCRIPT=/storage1/fs1/ccdg/Active/analysis/ref_grant/assembly_analysis_20200220/multiple_competitive_alignment/read_support_from_paf.py #TODO
+        READ_COUNT_SCRIPT=/opt/hall-lab/scripts/read_support_from_paf.py
         $PYTHON $READ_COUNT_SCRIPT -a ~{alignment} -v ~{variants} > support.txt
     >>>
     runtime {
         memory: "32G"
-        docker: "apregier/analyze_assemblies@sha256:adebe7469079606b3d2cd93841e55afa88e749f22090970465057cabebdbd632"
+        docker: "apregier/analyze_assemblies@sha256:cae6b31b36f8f49fcd1fcba8ba18107d4e0d7ad967600514d292423300c52425"
     }
     output {
         File read_support="support.txt"
@@ -154,13 +154,13 @@ task collate_read_support {
         set -exo pipefail
         PYTHON=/opt/hall-lab/python-2.7.15/bin/python
         BEDTOOLS=/opt/hall-lab/bedtools
-        FILTER_SUPPORT_SCRIPT=/storage1/fs1/ccdg/Active/analysis/ref_grant/assembly_analysis_20200220/multiple_competitive_alignment/filter_support.py #TODO
+        FILTER_SUPPORT_SCRIPT=/opt/hall-lab/scripts/filter_support.py
         join <(cat ~{contig_support} | sed 's/\t/ /' | sort) <(cat ~{ref_support} | sed 's/\t/ /' | sort) | sed 's/ /\t/' > collated.txt
         $PYTHON $FILTER_SUPPORT_SCRIPT -i collated.txt | sort | $BEDTOOLS groupby -g 1 -c 3,6 -o sum,sum > support.txt
     >>>
     runtime {
         memory: "32G"
-        docker: "apregier/analyze_assemblies@sha256:adebe7469079606b3d2cd93841e55afa88e749f22090970465057cabebdbd632"
+        docker: "apregier/analyze_assemblies@sha256:cae6b31b36f8f49fcd1fcba8ba18107d4e0d7ad967600514d292423300c52425"
     }
     output {
         File collated_support="support.txt"
@@ -178,7 +178,7 @@ task combine_read_support {
     >>>
     runtime {
         memory: "32G"
-        docker: "apregier/analyze_assemblies@sha256:adebe7469079606b3d2cd93841e55afa88e749f22090970465057cabebdbd632"
+        docker: "apregier/analyze_assemblies@sha256:cae6b31b36f8f49fcd1fcba8ba18107d4e0d7ad967600514d292423300c52425"
     }
     output {
         File total_read_support="support.txt"
