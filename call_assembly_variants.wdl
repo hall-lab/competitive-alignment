@@ -10,7 +10,7 @@ workflow CallAssemblyVariants {
         File ref
         File ref_index
         String ref_name
-        File fastq_list
+        #File fastq_list
     }
 
     call align_contigs as align_contig1_to_ref {
@@ -98,61 +98,61 @@ workflow CallAssemblyVariants {
             assembly_name=assembly_name
     }
 
-    call get_read_support.GetReadSupport as get_read_support{
-        input:
-            ref=ref,
-            contigs1=contigs1,
-            contigs2=contigs2,
-            reads_list=fastq_list,
-            small_variants_ref_contigs1=call_small_variants1_ref.vcf,
-            small_variants_contigs1_ref=call_small_variants1_ref.inverse_vcf,
-            small_variants_ref_contigs2=call_small_variants2_ref.vcf,
-            small_variants_contigs2_ref=call_small_variants2_ref.inverse_vcf,
-            small_variants_contigs1_contigs2=call_small_variants_self.vcf,
-            small_variants_contigs2_contigs1=call_small_variants_self.inverse_vcf
-    }
+    #call get_read_support.GetReadSupport as get_read_support{
+    #    input:
+    #        ref=ref,
+    #        contigs1=contigs1,
+    #        contigs2=contigs2,
+    #        reads_list=fastq_list,
+    #        small_variants_ref_contigs1=call_small_variants1_ref.vcf,
+    #        small_variants_contigs1_ref=call_small_variants1_ref.inverse_vcf,
+    #        small_variants_ref_contigs2=call_small_variants2_ref.vcf,
+    #        small_variants_contigs2_ref=call_small_variants2_ref.inverse_vcf,
+    #        small_variants_contigs1_contigs2=call_small_variants_self.vcf,
+    #        small_variants_contigs2_contigs1=call_small_variants_self.inverse_vcf
+    #}
 
-    call combine_small_variants_vcf {
-        input:
-            small_variants1_ref = call_small_variants1_ref.vcf,
-            small_variants1_ref_by_query = call_small_variants1_ref.inverse_vcf,
-            small_variants2_ref = call_small_variants2_ref.vcf,
-            small_variants2_ref_by_query = call_small_variants2_ref.inverse_vcf,
-            small_variants_self = call_small_variants_self.vcf,
-            small_variants_self_by_query = call_small_variants_self.inverse_vcf,
-            small_variants1_ref_index = call_small_variants1_ref.vcf_index,
-            small_variants1_ref_by_query_index = call_small_variants1_ref.inverse_vcf_index,
-            small_variants2_ref_index = call_small_variants2_ref.vcf_index,
-            small_variants2_ref_by_query_index = call_small_variants2_ref.inverse_vcf_index,
-            small_variants_self_index = call_small_variants_self.vcf_index,
-            small_variants_self_by_query_index = call_small_variants_self.inverse_vcf_index
-    }
+    #call combine_small_variants_vcf {
+    #    input:
+    #        small_variants1_ref = call_small_variants1_ref.vcf,
+    #        small_variants1_ref_by_query = call_small_variants1_ref.inverse_vcf,
+    #        small_variants2_ref = call_small_variants2_ref.vcf,
+    #        small_variants2_ref_by_query = call_small_variants2_ref.inverse_vcf,
+    #        small_variants_self = call_small_variants_self.vcf,
+    #        small_variants_self_by_query = call_small_variants_self.inverse_vcf,
+    #        small_variants1_ref_index = call_small_variants1_ref.vcf_index,
+    #        small_variants1_ref_by_query_index = call_small_variants1_ref.inverse_vcf_index,
+    #        small_variants2_ref_index = call_small_variants2_ref.vcf_index,
+    #        small_variants2_ref_by_query_index = call_small_variants2_ref.inverse_vcf_index,
+    #        small_variants_self_index = call_small_variants_self.vcf_index,
+    #        small_variants_self_by_query_index = call_small_variants_self.inverse_vcf_index
+    #}
 
-    call convert_to_fasta.ConvertToFasta as convert_ref {
-        input:
-            vcf=combine_small_variants_vcf.combined_vcf_ref,
-            vcf_index=combine_small_variants_vcf.combined_vcf_ref_index,
-            ref=ref,
-            ref_index=ref_index,
-            ref_name=ref_name
-    }
+    #call convert_to_fasta.ConvertToFasta as convert_ref {
+    #    input:
+    #        vcf=combine_small_variants_vcf.combined_vcf_ref,
+    #        vcf_index=combine_small_variants_vcf.combined_vcf_ref_index,
+    #        ref=ref,
+    #        ref_index=ref_index,
+    #        ref_name=ref_name
+    #}
 
-    call convert_to_fasta.ConvertToFasta as convert_self {
-        input:
-            vcf=combine_small_variants_vcf.remaining_vcf_contigs,
-            vcf_index=combine_small_variants_vcf.remaining_vcf_contigs_index,
-            ref=index_contigs2.unzipped_fasta,
-            ref_index=index_contigs2.fasta_index,
-            ref_name=assembly_name
-    }
+    #call convert_to_fasta.ConvertToFasta as convert_self {
+    #    input:
+    #        vcf=combine_small_variants_vcf.remaining_vcf_contigs,
+    #        vcf_index=combine_small_variants_vcf.remaining_vcf_contigs_index,
+    #        ref=index_contigs2.unzipped_fasta,
+    #        ref_index=index_contigs2.fasta_index,
+    #        ref_name=assembly_name
+    #}
 
-    call combine_small_variants {
-        input:
-            small_variants_ref = convert_ref.marker_fasta,
-            small_variants_self = convert_self.marker_fasta,
-            small_variants_ref_marker_positions = convert_ref.marker_positions,
-            small_variants_self_marker_positions = convert_self.marker_positions
-    }
+    #call combine_small_variants {
+    #    input:
+    #        small_variants_ref = convert_ref.marker_fasta,
+    #        small_variants_self = convert_self.marker_fasta,
+    #        small_variants_ref_marker_positions = convert_ref.marker_positions,
+    #        small_variants_self_marker_positions = convert_self.marker_positions
+    #}
 
     #call combine_sv {
     #    input:
@@ -165,11 +165,14 @@ workflow CallAssemblyVariants {
     #}
 
     output {
-        File small_variants = combine_small_variants.fasta
-        File small_variants_marker_positions = combine_small_variants.marker_positions
-        File small_variant_support_ref_contigs1 = get_read_support.small_variant_support_ref_contigs1
-        File small_variant_support_ref_contigs2 = get_read_support.small_variant_support_ref_contigs2
-        File small_variant_support_contigs1_contigs2 = get_read_support.small_variant_support_contigs1_contigs2
+        File sv_ref1 = call_sv1_ref.bedpe
+        File sv_ref2 = call_sv2_ref.bedpe
+        File sv_self = call_sv_self.bedpe
+    #    File small_variants = combine_small_variants.fasta
+    #    File small_variants_marker_positions = combine_small_variants.marker_positions
+    #    File small_variant_support_ref_contigs1 = get_read_support.small_variant_support_ref_contigs1
+    #    File small_variant_support_ref_contigs2 = get_read_support.small_variant_support_ref_contigs2
+    #    File small_variant_support_contigs1_contigs2 = get_read_support.small_variant_support_contigs1_contigs2
     #   File sv = combine_sv.fasta
     }
 }
