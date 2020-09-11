@@ -168,6 +168,9 @@ workflow CallAssemblyVariants {
         File sv_ref1 = call_sv1_ref.bedpe
         File sv_ref2 = call_sv2_ref.bedpe
         File sv_self = call_sv_self.bedpe
+        File small_variants_ref1 = call_small_variants1_ref.vcf
+        File small_variants_ref2 = call_small_variants2_ref.vcf
+        File small_variants_self = call_small_variants_self.vcf
     #    File small_variants = combine_small_variants.fasta
     #    File small_variants_marker_positions = combine_small_variants.marker_positions
     #    File small_variant_support_ref_contigs1 = get_read_support.small_variant_support_ref_contigs1

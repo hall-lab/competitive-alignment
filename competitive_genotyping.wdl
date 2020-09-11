@@ -23,29 +23,35 @@ workflow CompetitiveGenotyping {
             ref=ref,
             ref_index=ref_index,
             ref_name=ref_name,
-            fastq_list=fastq_list
+#            fastq_list=fastq_list
         }
     }
 
-    call merge_variants {
-        input:
-            small_variants=call_variants.small_variants,
-            small_variants_marker_positions=call_variants.small_variants_marker_positions #,
-            #sv=call_variants.sv  #TODO
-    }
+#    call merge_variants {
+#        input:
+#            small_variants=call_variants.small_variants,
+#            small_variants_marker_positions=call_variants.small_variants_marker_positions #,
+#            #sv=call_variants.sv  #TODO
+#    }
 
-    scatter (dataset in datasets) {
-        call genotype.GenotypeMarkers as genotype {
-            input:
-            dataset_name=dataset[0],
-            dataset_fastq=dataset[1],
-            variant_fasta=merge_variants.fasta_representation,
-            marker_positions=merge_variants.marker_positions
-        }
-    }
+#    scatter (dataset in datasets) {
+#        call genotype.GenotypeMarkers as genotype {
+#            input:
+#            dataset_name=dataset[0],
+#            dataset_fastq=dataset[1],
+#            variant_fasta=merge_variants.fasta_representation,
+#            marker_positions=merge_variants.marker_positions
+#        }
+#    }
 
     output {
-        Array[File] marker_counts = genotype.marker_counts
+        Array[File] sv_ref1 = call_variants.sv_ref1
+        Array[File] sv_ref2 = call_variants.sv_ref2
+        Array[File] sv_self = call_variants.sv_self
+        Array[File] small_variants_ref1 = call_variants.small_variants_ref1
+        Array[File] small_variants_ref2 = call_variants.small_variants_ref2
+        Array[File] small_variants_self = call_variants.small_variants_self
+#        Array[File] marker_counts = genotype.marker_counts
     }
 }
 
