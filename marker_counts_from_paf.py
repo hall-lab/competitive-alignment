@@ -47,18 +47,17 @@ class ReadAlignments:
                     distance = pafLine.edit_distance_for_region_in_paf_line(
                                      pos,
                                      pos+1)
-                    base_marker_id = marker_position[3]
+                    base_marker_id = marker_position[2]
                     query_pos_set = pafLine.query_pos_for_ref_pos_in_paf(pos)
                     if len(query_pos_set) == 1:
                         query_pos = query_pos_set.pop()
-                        newAlignment = Alignment(marker_position[4], distance, pafLine.rname, query_pos)
+                        newAlignment = Alignment(marker_position[3], distance, pafLine.rname, query_pos)
                         if base_marker_id in self.markers:
                             self.markers[base_marker_id].add(newAlignment)
                         else:
                             self.markers[base_marker_id] = set([newAlignment])
 
     def print_alignments(self):
-        markers_to_connect = set()
         markers = self.by_marker()
         for marker in markers:
             if marker.a != None and marker.r != None and marker.a.distance + marker.r.distance == 1:
@@ -92,8 +91,7 @@ def run(alignment_file, marker_file):
             elif read_alignments.name != pafLine.qname:
                 read_alignments.print_alignments()
                 read_alignments = ReadAlignments(pafLine.qname)
-            if pafLine.qlength > 20000:
-                read_alignments.add_alignment(pafLine, markers_on_contigs)
+            read_alignments.add_alignment(pafLine, markers_on_contigs)
     if read_alignments != None:
         read_alignments.print_alignments()
 

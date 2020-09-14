@@ -17,7 +17,7 @@ workflow GenotypeMarkers {
 
     call genotype {
         input:
-            alignment=align_dataset.alignment
+            alignment=align_dataset.alignment,
             marker_positions=marker_positions
     }
     output {
@@ -38,7 +38,7 @@ task align_dataset {
     >>>
     runtime {
         memory: "32G"
-        docker: "apregier/analyze_assemblies@sha256:edf94bd952180acb26423e9b0e583a8b00d658ac533634d59b32523cbd2a602a"
+        docker: "apregier/analyze_assemblies@sha256:54669591da03e517f61097f93f8eac512368ae503954276b0149b13ebae0aec4"
     }
     output {
         File alignment="alignment.paf"
@@ -53,13 +53,13 @@ task genotype {
     command <<<
         PYTHON=/opt/hall-lab/python-2.7.15/bin/python
         BEDTOOLS=/opt/hall-lab/bedtools
-        MARKER_COUNTS_SCRIPT=/storage1/fs1/ccdg/Active/analysis/ref_grant/assembly_analysis_20200220/multiple_competitive_alignment/marker_counts_from_paf.py #TODO
+        MARKER_COUNTS_SCRIPT=/opt/hall-lab/scripts/marker_counts_from_paf.py
         $PYTHON $MARKER_COUNTS_SCRIPT -a ~{alignment} -m ~{marker_positions} > read_marker_pairs.txt
         grep non-ambiguous read_marker_pairs.txt | cut -f 6-8 | sort | $BEDTOOLS groupby -g 1 -c 2,3 -o sum,sum > marker_counts.txt
     >>>
     runtime {
         memory: "4G"
-        docker: "apregier/analyze_assemblies@sha256:edf94bd952180acb26423e9b0e583a8b00d658ac533634d59b32523cbd2a602a"
+        docker: "apregier/analyze_assemblies@sha256:54669591da03e517f61097f93f8eac512368ae503954276b0149b13ebae0aec4"
     }
     output {
         File marker_counts="marker_counts.txt"

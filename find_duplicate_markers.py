@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+from __future__ import print_function
 import sys
 from optparse import OptionParser
 
@@ -25,6 +26,7 @@ def process_fasta(fasta_file):
                 else:
                     previous_marker = current_marker
                     current_marker = lines
+                    print("{} {}".format(current_marker[3], previous_marker[3]), file=sys.stderr)
                     if current_marker[1] == previous_marker[1] and current_marker[3] == previous_marker[3]:
                         add_duplicates(current_marker, previous_marker)
                 lines = []
@@ -35,7 +37,7 @@ def process_fasta(fasta_file):
     for duplicate_set in duplicates.values():
         for duplicate in duplicate_set:
             fasta_to_remove.add(duplicate)
-
+    print("{} duplicate sequences removed".format(str(len(fasta_to_remove))), file=sys.stderr)
     with open(fasta_file, "r") as fa:
         lines = []
         for line in fa:

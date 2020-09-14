@@ -5,11 +5,14 @@ import "genotype_markers.wdl" as genotype
 workflow CompetitiveGenotyping {
     input {
         File assembly_list
+        File dataset_list
         File ref
         File ref_index
         String ref_name
+        File fastq_list
     }
     Array[Array[File]] assemblies = read_tsv(assembly_list)
+    Array[Array[File]] datasets = read_tsv(dataset_list)
 
     scatter (assembly in assemblies) {
         call call_variants.CallAssemblyVariants as call_variants {
@@ -19,29 +22,36 @@ workflow CompetitiveGenotyping {
             contigs2=assembly[2],
             ref=ref,
             ref_index=ref_index,
-            ref_name=ref_name
+            ref_name=ref_name,
+#            fastq_list=fastq_list
         }
     }
 
-    call merge_variants {
-        input:
-            small_variants=select_all(call_variants.small_variants),
-            small_variants_marker_positions=select_all(call_variants.small_variants_marker_positions) #,
-            #sv=select_all(call_variants.sv)  #TODO
-    }
+#    call merge_variants {
+#        input:
+#            small_variants=call_variants.small_variants,
+#            small_variants_marker_positions=call_variants.small_variants_marker_positions #,
+#            #sv=call_variants.sv  #TODO
+#    }
 
-    scatter (dataset in datasets) {
-        call genotype.GenotypeMarkers as genotype {
-            input:
-            dataset_name=dataset[0],
-            dataset_fastq=dataset[1],
-            variant_fasta=merge_variants.fasta_representation
-            marker_positions=merge_variants.marker_positions
-        }
-    }
+#    scatter (dataset in datasets) {
+#        call genotype.GenotypeMarkers as genotype {
+#            input:
+#            dataset_name=dataset[0],
+#            dataset_fastq=dataset[1],
+#            variant_fasta=merge_variants.fasta_representation,
+#            marker_positions=merge_variants.marker_positions
+#        }
+#    }
 
     output {
-        Array[File] marker_counts = genotype.marker_counts
+        Array[File] sv_ref1 = call_variants.sv_ref1
+        Array[File] sv_ref2 = call_variants.sv_ref2
+        Array[File] sv_self = call_variants.sv_self
+        Array[File] small_variants_ref1 = call_variants.small_variants_ref1
+        Array[File] small_variants_ref2 = call_variants.small_variants_ref2
+        Array[File] small_variants_self = call_variants.small_variants_self
+#        Array[File] marker_counts = genotype.marker_counts
     }
 }
 
@@ -53,13 +63,13 @@ task merge_variants {
     }
     command <<<
         PYTHON=/opt/hall-lab/python-2.7.15/bin/python
-        FIND_DUPS=/storage1/fs1/ccdg/Active/analysis/ref_grant/assembly_analysis_20200220/multiple_competitive_alignment/find_duplicate_markers.py #TODO
-        cat ~{small_variants} | paste - - - - | awk -v OFS="\t" -v FS="\t" '{print($2, $4, $1, $3)}' | sort | awk -v OFS="\n" -v FS="\t" '{print($3,$1,$4,$2)}' > tmp
+        FIND_DUPS=/opt/hall-lab/scripts/find_duplicate_markers.py
+        cat ~{sep=" " small_variants} | paste - - - - | awk -v OFS="\t" -v FS="\t" '{if($2<$4) {print($2, $4, $1, $3)} else{print($4,$2,$3,$1)}}' | sort | awk -v OFS="\n" -v FS="\t" '{print($3,$1,$4,$2)}' > tmp
         $PYTHON $FIND_DUPS -i tmp > variants_merged.fasta
-        cat ~{small_variants_marker_positions} | sort -u > marker_positions.txt
+        cat ~{sep=" " small_variants_marker_positions} | sort -u > marker_positions.txt
     >>>
     runtime {
-        docker: "apregier/analyze_assemblies@sha256:edf94bd952180acb26423e9b0e583a8b00d658ac533634d59b32523cbd2a602a"
+        docker: "apregier/analyze_assemblies@sha256:54669591da03e517f61097f93f8eac512368ae503954276b0149b13ebae0aec4"
         memory: "64 GB"
     }
     output {
