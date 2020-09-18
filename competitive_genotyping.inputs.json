@@ -4,5 +4,7 @@
     "CompetitiveGenotyping.ref": "/scratch1/fs1/ccdg/aregier/GCA_000001405.15_GRCh38_no_alt_analysis_set.fna",
     "CompetitiveGenotyping.ref_index": "/scratch1/fs1/ccdg/aregier/GCA_000001405.15_GRCh38_no_alt_analysis_set.fna.fai",
     "CompetitiveGenotyping.ref_name": "GRCh38",
-    "CompetitiveGenotyping.fastq_list": "/storage1/fs1/ccdg/Active/analysis/ref_grant/assembly_analysis_20200220/competitive_genotyping_round1/reads_list.txt"
+    "CompetitiveGenotyping.fastq_list": "/storage1/fs1/ccdg/Active/analysis/ref_grant/assembly_analysis_20200220/competitive_genotyping_round1/reads_list.txt",
+    "CompetitiveGenotyping.segdup_bed": "/scratch1/fs1/ccdg/aregier/genomicSuperDups.b38.sorted.bed",
+    "CompetitiveGenotyping.str_bed": "/scratch1/fs1/ccdg/aregier/simpleRepeat.b38.sorted.bed"
 }

@@ -10,6 +10,8 @@ workflow CallAssemblyVariants {
         File ref
         File ref_index
         String ref_name
+        File segdup_bed
+        File str_bed
         #File fastq_list
     }
 
@@ -112,21 +114,21 @@ workflow CallAssemblyVariants {
     #        small_variants_contigs2_contigs1=call_small_variants_self.inverse_vcf
     #}
 
-    #call combine_small_variants_vcf {
-    #    input:
-    #        small_variants1_ref = call_small_variants1_ref.vcf,
-    #        small_variants1_ref_by_query = call_small_variants1_ref.inverse_vcf,
-    #        small_variants2_ref = call_small_variants2_ref.vcf,
-    #        small_variants2_ref_by_query = call_small_variants2_ref.inverse_vcf,
-    #        small_variants_self = call_small_variants_self.vcf,
-    #        small_variants_self_by_query = call_small_variants_self.inverse_vcf,
-    #        small_variants1_ref_index = call_small_variants1_ref.vcf_index,
-    #        small_variants1_ref_by_query_index = call_small_variants1_ref.inverse_vcf_index,
-    #        small_variants2_ref_index = call_small_variants2_ref.vcf_index,
-    #        small_variants2_ref_by_query_index = call_small_variants2_ref.inverse_vcf_index,
-    #        small_variants_self_index = call_small_variants_self.vcf_index,
-    #        small_variants_self_by_query_index = call_small_variants_self.inverse_vcf_index
-    #}
+    call combine_small_variants_vcf {
+        input:
+            small_variants1_ref = call_small_variants1_ref.vcf,
+            small_variants1_ref_by_query = call_small_variants1_ref.inverse_vcf,
+            small_variants2_ref = call_small_variants2_ref.vcf,
+            small_variants2_ref_by_query = call_small_variants2_ref.inverse_vcf,
+            small_variants_self = call_small_variants_self.vcf,
+            small_variants_self_by_query = call_small_variants_self.inverse_vcf,
+            small_variants1_ref_index = call_small_variants1_ref.vcf_index,
+            small_variants1_ref_by_query_index = call_small_variants1_ref.inverse_vcf_index,
+            small_variants2_ref_index = call_small_variants2_ref.vcf_index,
+            small_variants2_ref_by_query_index = call_small_variants2_ref.inverse_vcf_index,
+            small_variants_self_index = call_small_variants_self.vcf_index,
+            small_variants_self_by_query_index = call_small_variants_self.inverse_vcf_index
+    }
 
     #call convert_to_fasta.ConvertToFasta as convert_ref {
     #    input:
@@ -154,15 +156,20 @@ workflow CallAssemblyVariants {
     #        small_variants_self_marker_positions = convert_self.marker_positions
     #}
 
-    #call combine_sv {
-    #    input:
-    #        sv_ref1 = call_sv1_ref.bedpe,
-    #        sv_ref2 = call_sv2_ref.bedpe,
-    #        sv_self = call_sv_self.bedpe,
-    #        contigs1 = contigs1,
-    #        contigs2 = contigs2,
-    #        ref = ref
-    #}
+    call combine_sv {
+        input:
+            sv_ref1 = call_sv1_ref.bedpe,
+            sv_ref2 = call_sv2_ref.bedpe,
+    }
+
+    call count_variants {
+        input:
+            small_variants_vcf = combine_small_variants_vcf.combined_vcf_ref,
+            sv_bedpe = combine_sv.bedpe,
+            segdup_bed = segdup_bed,
+            str_bed = str_bed,
+            assembly_name = assembly_name
+    }
 
     output {
         File sv_ref1 = call_sv1_ref.bedpe
@@ -171,12 +178,14 @@ workflow CallAssemblyVariants {
         File small_variants_ref1 = call_small_variants1_ref.vcf
         File small_variants_ref2 = call_small_variants2_ref.vcf
         File small_variants_self = call_small_variants_self.vcf
-    #    File small_variants = combine_small_variants.fasta
+        File small_variants_ref_combined = combine_small_variants_vcf.combined_vcf_ref
+        File small_variants_ref_combined_index = combine_small_variants_vcf.combined_vcf_ref_index
+        File sv_combined = combine_sv.bedpe
+        File counts = count_variants.counts
     #    File small_variants_marker_positions = combine_small_variants.marker_positions
     #    File small_variant_support_ref_contigs1 = get_read_support.small_variant_support_ref_contigs1
     #    File small_variant_support_ref_contigs2 = get_read_support.small_variant_support_ref_contigs2
     #    File small_variant_support_contigs1_contigs2 = get_read_support.small_variant_support_contigs1_contigs2
-    #   File sv = combine_sv.fasta
     }
 }
 
@@ -204,20 +213,85 @@ task combine_sv {
     input {
         File sv_ref1
         File sv_ref2
-        File sv_self
-        File contigs1
-        File contigs2
-        File ref
     }
     command <<<
-    #TODO
+        set -exo pipefail
+        BEDTOOLS=/opt/hall-lab/bedtools
+        SVTOOLS=/opt/hall-lab/python-2.7.15/bin/svtools
+        $BEDTOOLS pairtopair -type both -a ~{sv_ref1} -b ~{sv_ref2} -is -slop 50 | $SVTOOLS bedpesort | cut -f 1-6,11 | uniq | awk '{print $s ".homalt." NR}' > ref1_ref2_homozygous.bedpe
+        $BEDTOOLS pairtopair -type notboth -a ~{sv_ref1} -b ~{sv_ref2} -is -slop 50 | $SVTOOLS bedpesort | cut -f 1-6,11 | uniq | awk '{print $s ".ref1." NR}' > ref1_het.bedpe
+        $BEDTOOLS pairtopair -type notboth -b ~{sv_ref1} -a ~{sv_ref2} -is -slop 50 | $SVTOOLS bedpesort | cut -f 1-6,11 | uniq | awk '{print $s ".ref2." NR}' > ref2_het.bedpe
+        $SVTOOLS bedpesort <(cat ref1_ref2_homozygous.bedpe ref1_het.bedpe ref2_het.bedpe) > ref1_ref2.bedpe
     >>>
     runtime {
-        memory: "64G"
+        memory: "16G"
         docker: "apregier/analyze_assemblies@sha256:54669591da03e517f61097f93f8eac512368ae503954276b0149b13ebae0aec4"
     }
     output {
-        File fasta = "sv.combined.fasta"
+        File bedpe = "ref1_ref2.bedpe"
+    }
+}
+
+task count_variants {
+    input {
+        File small_variants_vcf
+        File sv_bedpe
+        File segdup_bed
+        File str_bed
+        String assembly_name
+    }
+    command <<<
+        set -exo pipefail
+        BEDTOOLS=/opt/hall-lab/bedtools
+        PYTHON=/opt/hall-lab/python-2.7.15/bin/python
+        VCFTOBEDPE=/opt/hall-lab/scripts/vcfToBedpe.py
+        SVLENGTHS=/opt/hall-lab/scripts/sv_lengths.py
+        GREP=/bin/grep
+        STR_BED=str.bed
+        SEGDUP_BED=segdup.bed
+        cat ~{str_bed} | grep -v "^track" | sed 's/^/chr/' > $STR_BED
+        cat ~{segdup_bed} | grep -v "^track" | sed 's/^/chr/' > $SEGDUP_BED
+        $BEDTOOLS pairtobed -a ~{sv_bedpe} -b $STR_BED -type either > sv.str.bedpe
+        $BEDTOOLS pairtobed -a ~{sv_bedpe} -b $SEGDUP_BED -type either > sv.allSegDup.bedpe
+        $BEDTOOLS pairtobed -a <($BEDTOOLS pairtobed -a ~{sv_bedpe} -b $STR_BED -type neither) -b $SEGDUP_BED -type either > sv.segDup.bedpe
+        $BEDTOOLS pairtobed -a <($BEDTOOLS pairtobed -a ~{sv_bedpe} -b $STR_BED -type neither) -b $SEGDUP_BED -type neither > sv.nonRep.bedpe
+        rm -f counts.txt
+        cat ~{sv_bedpe} | cut -f 7 | cut -f 1-2 -d . | sort | uniq -c | sed 's/[[:space:]]\+/\t/g' | sed 's/^\t//' | sed 's/^/sv\tall\t/' | sed 's/\./\t/' >> counts.txt
+        cat sv.str.bedpe | cut -f 7 | cut -f 1-2 -d . | sort | uniq -c | sed 's/[[:space:]]\+/\t/g' | sed 's/^\t//' | sed 's/^/sv\tstr\t/' | sed 's/\./\t/' >> counts.txt
+        cat sv.segDup.bedpe | cut -f 7 | cut -f 1-2 -d . | sort | uniq -c | sed 's/[[:space:]]\+/\t/g' | sed 's/^\t//' | sed 's/^/sv\tsegDup\t/' | sed 's/\./\t/' >> counts.txt
+        cat sv.nonRep.bedpe | cut -f 7 | cut -f 1-2 -d . | sort | uniq -c | sed 's/[[:space:]]\+/\t/g' | sed 's/^\t//' | sed 's/^/sv\tnonRep\t/' | sed 's/\./\t/' >> counts.txt
+        $PYTHON $VCFTOBEDPE -i ~{small_variants_vcf} -o indels.bedpe -m 1 -M 49
+        #$PYTHON $SVLENTHS -v ~{small_variants_vcf} -o indel_lengths.txt
+        $PYTHON $VCFTOBEDPE -i ~{small_variants_vcf} -o large_indels.bedpe -m 50
+        $BEDTOOLS pairtobed -a large_indels.bedpe -b $STR_BED -type either > large_indels.str.bedpe
+        $BEDTOOLS pairtobed -a large_indels.bedpe -b $SEGDUP_BED -type either > large_indels.allSegDup.bedpe
+        $BEDTOOLS pairtobed -a <($BEDTOOLS pairtobed -a large_indels.bedpe -b $STR_BED -type neither) -b $SEGDUP_BED -type either > large_indels.segDup.bedpe
+        $BEDTOOLS pairtobed -a <($BEDTOOLS pairtobed -a large_indels.bedpe -b $STR_BED -type neither) -b $SEGDUP_BED -type neither > large_indels.nonRep.bedpe
+        paste <(grep -v GENOTYPE large_indels.bedpe | cut -f 8) <(grep -v GENOTYPE large_indels.bedpe | cut -f 7) | sort | uniq -c | sed 's/[[:space:]]\+/\t/g' | sed 's/^\t//' | sed 's/^/indels\tall\t/' >> counts.txt
+        paste <(grep -v GENOTYPE large_indels.str.bedpe | cut -f 8) <(grep -v GENOTYPE large_indels.str.bedpe | cut -f 7) | sort | uniq -c | sed 's/[[:space:]]\+/\t/g' | sed 's/^\t//' | sed 's/^/indels\tstr\t/' >> counts.txt
+        paste <(grep -v GENOTYPE large_indels.segDup.bedpe | cut -f 8) <(grep -v GENOTYPE large_indels.segDup.bedpe | cut -f 7) | sort | uniq -c | sed 's/[[:space:]]\+/\t/g' | sed 's/^\t//' | sed 's/^/indels\tsegDup\t/' >> counts.txt
+        paste <(grep -v GENOTYPE large_indels.nonRep.bedpe | cut -f 8) <(grep -v GENOTYPE large_indels.nonRep.bedpe | cut -f 7) | sort | uniq -c | sed 's/[[:space:]]\+/\t/g' | sed 's/^\t//' | sed 's/^/indels\tnonRep\t/' >> counts.txt
+        $BEDTOOLS pairtobed -a indels.bedpe -b $STR_BED -type either > indels.str.bedpe
+        $BEDTOOLS pairtobed -a indels.bedpe -b $SEGDUP_BED -type either > indels.allSegDup.bedpe
+        $BEDTOOLS pairtobed -a <($BEDTOOLS pairtobed -a indels.bedpe -b $STR_BED -type neither) -b $SEGDUP_BED -type either > indels.segDup.bedpe
+        $BEDTOOLS pairtobed -a <($BEDTOOLS pairtobed -a indels.bedpe -b $STR_BED -type neither) -b $SEGDUP_BED -type neither > indels.nonRep.bedpe
+        paste <(grep -v GENOTYPE indels.bedpe | cut -f 8) <(grep -v GENOTYPE indels.bedpe | cut -f 7) | sort | uniq -c | sed 's/[[:space:]]\+/\t/g' | sed 's/^\t//' | sed 's/^/small_indels\tall\t/' >> counts.txt
+        paste <(grep -v GENOTYPE indels.str.bedpe | cut -f 8) <(grep -v GENOTYPE indels.str.bedpe | cut -f 7) | sort | uniq -c | sed 's/[[:space:]]\+/\t/g' | sed 's/^\t//' | sed 's/^/small_indels\tstr\t/' >> counts.txt
+        paste <(grep -v GENOTYPE indels.segDup.bedpe | cut -f 8) <(grep -v GENOTYPE indels.segDup.bedpe | cut -f 7) | sort | uniq -c | sed 's/[[:space:]]\+/\t/g' | sed 's/^\t//' | sed 's/^/small_indels\tsegDup\t/' >> counts.txt
+        paste <(grep -v GENOTYPE indels.nonRep.bedpe | cut -f 8) <(grep -v GENOTYPE indels.nonRep.bedpe | cut -f 7) | sort | uniq -c | sed 's/[[:space:]]\+/\t/g' | sed 's/^\t//' | sed 's/^/small_indels\tnonRep\t/' >> counts.txt
+        zcat ~{small_variants_vcf} | grep -v "^#" | awk 'length($4)==1 && length($5)==1' | cut -f 10 | sort | uniq -c | sed 's/[[:space:]]\+/\t/g' | sed 's/^\t//' | sed 's/^/snps\tall\t/' | awk 'BEGIN {OFS = "\t" ;}{print $1,$2,$3,"SNP",$4}' >> counts.txt
+        $BEDTOOLS intersect -u -a ~{small_variants_vcf} -b $STR_BED | grep -v "^#" | awk 'length($4)==1 && length($5)==1' | cut -f 10 | sort | uniq -c | sed 's/[[:space:]]\+/\t/g' | sed 's/^\t//' | sed 's/^/snps\tstr\t/' | awk 'BEGIN {OFS = "\t" ;}{print $1,$2,$3,"SNP",$4}' >> counts.txt
+        $BEDTOOLS intersect -u -a <(cat <(zcat ~{small_variants_vcf} | $GREP "^#") <($BEDTOOLS intersect -v -a ~{small_variants_vcf} -b $STR_BED)) -b $SEGDUP_BED | grep -v "^#" | awk 'length($4)==1 && length($5)==1' | cut -f 10 | sort | uniq -c | sed 's/[[:space:]]\+/\t/g' | sed 's/^\t//' | sed 's/^/snps\tsegDup\t/' | awk 'BEGIN {OFS = "\t" ;}{print $1,$2,$3,"SNP",$4}' >> counts.txt
+        $BEDTOOLS intersect -v -a <(cat <(zcat ~{small_variants_vcf} | $GREP "^#") <($BEDTOOLS intersect -v -a ~{small_variants_vcf} -b $STR_BED)) -b $SEGDUP_BED | grep -v "^#" | awk 'length($4)==1 && length($5)==1' | cut -f 10 | sort | uniq -c | sed 's/[[:space:]]\+/\t/g' | sed 's/^\t//' | sed 's/^/snps\tnonRep\t/' | awk 'BEGIN {OFS = "\t" ;}{print $1,$2,$3,"SNP",$4}' >> counts.txt
+        cat counts.txt | sed 's/^/~{assembly_name}\t/' > tmp
+        mv tmp counts.txt
+    >>>
+    runtime {
+        memory: "16G"
+        docker: "apregier/analyze_assemblies@sha256:4cd67e009ae65820772265b572fc8cb9ce9e6e09228d1d73ee1f5d9118e91fca"
+    }
+    output {
+        File counts = "counts.txt"
     }
 }
 
@@ -240,18 +314,17 @@ task combine_small_variants_vcf {
         set -exo pipefail
         BCFTOOLS=/opt/hall-lab/bcftools-1.9/bin/bcftools
         TABIX=/opt/hall-lab/htslib-1.9/bin/tabix
+        BGZIP=/opt/hall-lab/htslib-1.9/bin/bgzip
         mkdir tmp1 tmp2 tmp3 tmp4
-        $BCFTOOLS isec -p tmp1 ~{small_variants_self} ~{small_variants1_ref_by_query} && $BCFTOOLS query -f '%ID\n' tmp1/0002.vcf > self1_in_ref
-        $BCFTOOLS isec -p tmp2 ~{small_variants_self_by_query} ~{small_variants2_ref_by_query} && $BCFTOOLS query -f '%ID\n' tmp2/0002.vcf > self2_in_ref
-        cat self1_in_ref self2_in_ref > exclude_ids_ref
-        $BCFTOOLS isec -p tmp3 ~{small_variants1_ref_by_query} ~{small_variants_self} && $BCFTOOLS query -f '%ID\n' tmp3/0002.vcf > ref_in_self1
-        $BCFTOOLS isec -p tmp4 ~{small_variants2_ref_by_query} ~{small_variants_self_by_query} && $BCFTOOLS query -f '%ID' tmp4/0002.vcf > ref_in_self2
-        cat ref_in_self1 ref_in_self2 > exclude_ids_self
-
-        $BCFTOOLS concat -a -d all ~{small_variants1_ref} ~{small_variants2_ref} | $BCFTOOLS view -i '%ID!=@exclude_ids_ref' -o small_variants.combined.vcf.gz -O z
-        $BCFTOOLS view -o small_variants.contigs.vcf.gz -O z -i '%ID!=@exclude_ids_self' ~{small_variants_self}
-        $TABIX -f -p vcf small_variants.combined.vcf.gz
-        $TABIX -f -p vcf small_variants.contigs.vcf.gz
+        $BCFTOOLS isec -c none -p tmp1 ~{small_variants1_ref} ~{small_variants2_ref}
+        cat tmp1/0003.vcf | sed '/^chr/ s|...$|1/1|g' | $BGZIP -c > ref1_ref2_homozygous.vcf.gz
+        cat tmp1/0000.vcf | sed '/^chr/ s/...$/1|0/g' | $BGZIP -c > ref1_het.vcf.gz
+        cat tmp1/0001.vcf | sed '/^chr/ s/...$/0|1/g' | $BGZIP -c > ref2_het.vcf.gz
+        $TABIX -fp vcf ref1_ref2_homozygous.vcf.gz
+        $TABIX -fp vcf ref1_het.vcf.gz
+        $TABIX -fp vcf ref2_het.vcf.gz
+        $BCFTOOLS concat -a -d all ref1_ref2_homozygous.vcf.gz ref1_het.vcf.gz ref2_het.vcf.gz -o small_variants.combined.vcf.gz -O z
+        $TABIX -fp vcf small_variants.combined.vcf.gz
     >>>
     runtime {
         memory: "64G"
@@ -259,9 +332,7 @@ task combine_small_variants_vcf {
     }
     output {
         File combined_vcf_ref = "small_variants.combined.vcf.gz"
-        File remaining_vcf_contigs = "small_variants.contigs.vcf.gz"
         File combined_vcf_ref_index = "small_variants.combined.vcf.gz.tbi"
-        File remaining_vcf_contigs_index = "small_variants.contigs.vcf.gz.tbi"
     }
 }
 
