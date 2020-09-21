@@ -1,0 +1,557 @@
+---
+title: "Assembly variant summary"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(ggplot2)
+library(dplyr)
+library(reshape2)
+library(scales)
+```
+
+```{r}
+population <- read.table("population.tsv", header=TRUE)
+hg002 <- data.frame(Order=0, ChildID="HG002", FamilyID=NA, Sex="male", Subpopulation=NA, Superpopulation="EUR")
+hg00733 <- data.frame(Order=0, ChildID="HG00733", FamilyID=NA, Sex="male", Subpopulation="PUR", Superpopulation="AMR")
+population <- rbind(population, hg002)
+population <- rbind(population, hg00733)
+```
+
+```{r}
+counts <- read.table("counts.txt", header=FALSE, col.names=c("ID", "Source", "Region", "Count", "Type", "Genotype"))
+counts$Genotype[counts$Genotype=="homalt" | counts$Genotype=="1/1"] <- "HOMALT"
+counts$Genotype[counts$Genotype=="0|1" | counts$Genotype=="1|0" | counts$Genotype=="ref1" | counts$Genotype=="ref2"] <- "HET"
+counts$Type <- as.factor(counts$Type)
+counts$Genotype <- as.factor(counts$Genotype)
+counts$CompoundType <- paste(counts$Source, counts$Type)
+```
+
+```{r}
+counts <- merge(counts, population, by.x="ID", by.y="ChildID")
+superpop <- data.frame(ID=counts$ID, Superpopulation=counts$Superpopulation)
+superpop <- unique(superpop)
+counts$ID <- factor(counts$ID, levels=superpop$ID[order(superpop$Superpopulation)])
+```
+
+```{r}
+self_counts <-read.table("self_counts.txt", header=FALSE, col.names=c("ID", "Coord", "CompareResult", "Region", "Count", "Genotype"))
+self_counts <- merge(self_counts, population, by.x="ID", by.y="ChildID")
+self_counts$ID <- factor(self_counts$ID, levels=superpop$ID[order(superpop$Superpopulation)])
+self_counts <- rename(self_counts, Sample=ID)
+```
+
+```{r}
+ggplot(self_counts, aes(x=Sample, y=Count, fill=CompareResult)) +
+  geom_bar(stat="identity") +
+  facet_grid(Region~Coord) +
+  ggsave("self_snp_counts.png")
+```
+
+```{r}
+ggplot(counts[counts$Region=="all",], aes(x=ID, y=Count, fill=Superpopulation, col=Genotype)) +
+  geom_bar(stat="identity") +
+  facet_wrap("CompoundType", scales="free") +
+  ggtitle("Genome-wide")
+ggsave("all_counts.png")
+ggplot(counts[counts$Region=="nonRep",], aes(x=ID, y=Count, fill=Superpopulation, col=Genotype)) +
+  geom_bar(stat="identity") +
+  facet_wrap("CompoundType", scales="free") +
+  ggtitle("Non-repetitive genome regions")
+ggsave("nonRep_counts.png")
+ggplot(counts[counts$Region=="segDup",], aes(x=ID, y=Count, fill=Superpopulation, col=Genotype)) +
+  geom_bar(stat="identity") +
+  facet_wrap("CompoundType", scales="free") +
+  ggtitle("SegDup regions")
+ggsave("segDup_counts.png")
+ggplot(counts[counts$Region=="str",], aes(x=ID, y=Count, fill=Superpopulation, col=Genotype)) +
+  geom_bar(stat="identity") +
+  facet_wrap("CompoundType", scales="free") +
+  ggtitle("STR regions")
+ggsave("str_counts.png")
+```
+
+```{r}
+counts_sv2 <- counts %>% filter(Type!="TRANS" & Type!="GAP" & Type!="G_OVERLAP" & Source!="snps" & Source!="small_indels") %>% filter(Region=="nonRep")
+counts_sv2 <- dcast(counts_sv2, ID+Superpopulation+Type~Genotype, value.var="Count", fun.aggregate=sum)
+counts_sv2$Total <- counts_sv2$HET + counts_sv2$HOMALT
+counts_sv2 <- rename(counts_sv2, Sample=ID)
+counts_sv2$Type <- factor(counts_sv2$Type, levels=c("DUP", "INV", "DEL", "INS"))
+
+ggplot(counts_sv2, aes(x=Sample, y=Total, fill=Type)) +
+  geom_bar(stat="identity") +
+  theme_bw() +
+  theme(axis.text.x=element_blank(),
+        axis.title.x=element_text(size=18),  
+        axis.ticks.x=element_blank(),
+        axis.title.y = element_text(angle = 0, size=18),
+        plot.title = element_text(size = 18, face = "bold"),
+        legend.text=element_text(size=16),
+        legend.title=element_text(size=18),
+        axis.text=element_text(size=16)) +
+  ggtitle("SV counts in non-repetitive genome regions")
+ggsave("nonRep_sv_counts_by_type.png")
+```
+```{r}
+counts_sv2 <- counts %>% filter(Type!="TRANS" & Type!="GAP" & Type!="G_OVERLAP" & Source!="snps" & Source!="small_indels" & Region=="all")
+counts_sv2 <- dcast(counts_sv2, ID+Superpopulation+Type~Genotype, value.var="Count", fun.aggregate=sum)
+counts_sv2$Total <- counts_sv2$HET + counts_sv2$HOMALT
+counts_sv2 <- rename(counts_sv2, Sample=ID)
+counts_sv2 <- rename(counts_sv2, Count=Total)
+counts_sv2$Type <- factor(counts_sv2$Type, levels=c("DUP", "INV", "DEL", "INS"))
+
+ggplot(counts_sv2, aes(x=Sample, y=Count, fill=Type)) +
+  geom_bar(stat="identity") +
+  theme_bw() +
+  theme(axis.text.x=element_blank(),
+        axis.title.x=element_text(size=18),  
+        axis.ticks.x=element_blank(),
+        axis.title.y = element_text(angle = 0, size=18),
+        plot.title = element_text(size = 18, face = "bold"),
+        legend.text=element_text(size=16),
+        legend.title=element_text(size=18),
+        axis.text=element_text(size=16)) +
+  scale_y_continuous(labels = comma) +
+  ggtitle("SV counts genome-wide")
+ggsave("sv_counts_by_type_genome_wide.png")
+```
+```{r}
+counts_sv2 <- counts %>% filter(Type!="TRANS" & Type!="GAP" & Type!="G_OVERLAP" & Source!="snps" & Source!="small_indels" & Region=="str")
+counts_sv2 <- dcast(counts_sv2, ID+Superpopulation+Type~Genotype, value.var="Count", fun.aggregate=sum)
+counts_sv2$Total <- counts_sv2$HET + counts_sv2$HOMALT
+counts_sv2 <- rename(counts_sv2, Sample=ID)
+counts_sv2 <- rename(counts_sv2, Count=Total)
+counts_sv2$Type <- factor(counts_sv2$Type, levels=c("DUP", "INV", "DEL", "INS"))
+
+ggplot(counts_sv2, aes(x=Sample, y=Count, fill=Type)) +
+  geom_bar(stat="identity") +
+  theme_bw() +
+  theme(axis.text.x=element_blank(),
+        axis.title.x=element_text(size=18),  
+        axis.ticks.x=element_blank(),
+        axis.title.y = element_text(angle = 0, size=18),
+        plot.title = element_text(size = 18, face = "bold"),
+        legend.text=element_text(size=16),
+        legend.title=element_text(size=18),
+        axis.text=element_text(size=16)) +
+  scale_y_continuous(labels = comma) +
+  ggtitle("SV counts in STR regions")
+ggsave("sv_counts_by_type_str.png")
+```
+```{r}
+counts_sv2 <- counts %>% filter(Type!="TRANS" & Type!="GAP" & Type!="G_OVERLAP" & Source!="snps" & Source!="small_indels" & Region=="segDup")
+counts_sv2 <- dcast(counts_sv2, ID+Superpopulation+Type~Genotype, value.var="Count", fun.aggregate=sum)
+counts_sv2$Total <- counts_sv2$HET + counts_sv2$HOMALT
+counts_sv2 <- rename(counts_sv2, Sample=ID)
+counts_sv2 <- rename(counts_sv2, Count=Total)
+counts_sv2$Type <- factor(counts_sv2$Type, levels=c("DUP", "INV", "DEL", "INS"))
+
+ggplot(counts_sv2, aes(x=Sample, y=Count, fill=Type)) +
+  geom_bar(stat="identity") +
+  theme_bw() +
+  theme(axis.text.x=element_blank(),
+        axis.title.x=element_text(size=18),  
+        axis.ticks.x=element_blank(),
+        axis.title.y = element_text(angle = 0, size=18),
+        plot.title = element_text(size = 18, face = "bold"),
+        legend.text=element_text(size=16),
+        legend.title=element_text(size=18),
+        axis.text=element_text(size=16)) +
+  scale_y_continuous(labels = comma) +
+  ggtitle("SV counts in SegDup regions")
+ggsave("sv_counts_by_type_segDup.png")
+```
+```{r}
+counts_sv2 <- counts %>% filter(Type!="TRANS" & Type!="GAP" & Type!="G_OVERLAP" & Source!="snps" & Source!="small_indels" & (Region=="segDup" | Region=="str"))
+counts_sv2 <- dcast(counts_sv2, ID+Superpopulation+Type~Genotype, value.var="Count", fun.aggregate=sum)
+counts_sv2$Total <- counts_sv2$HET + counts_sv2$HOMALT
+counts_sv2 <- rename(counts_sv2, Sample=ID)
+counts_sv2 <- rename(counts_sv2, Count=Total)
+counts_sv2$Type <- factor(counts_sv2$Type, levels=c("DUP", "INV", "DEL", "INS"))
+
+ggplot(counts_sv2, aes(x=Sample, y=Count, fill=Type)) +
+  geom_bar(stat="identity") +
+  theme_bw() +
+  theme(axis.text.x=element_blank(),
+        axis.title.x=element_text(size=18),  
+        axis.ticks.x=element_blank(),
+        axis.title.y = element_text(angle = 0, size=18),
+        plot.title = element_text(size = 18, face = "bold"),
+        legend.text=element_text(size=16),
+        legend.title=element_text(size=18),
+        axis.text=element_text(size=16)) +
+  scale_y_continuous(labels = comma) +
+  ggtitle("SV counts in repetitive regions")
+ggsave("sv_counts_by_type_rep.png")
+```
+
+```{r}
+counts_sv <- counts %>% filter(Type!="TRANS" & Type!="GAP" & Type!="G_OVERLAP" & Source!="snps" & Source!="small_indels") %>% filter(Region=="nonRep")
+counts_sv <- dcast(counts_sv, ID+Superpopulation+Genotype~Type, value.var="Count", fun.aggregate=sum)
+counts_sv$Total <- counts_sv$DEL + counts_sv$DUP + counts_sv$INS + counts_sv$INV
+```
+
+```{r}
+ggplot(counts_sv, aes(x=ID, y=Total, fill=Genotype)) +
+  geom_bar(stat="identity") +
+  theme_bw() +
+  theme(axis.text.x=element_blank(),
+        axis.title.x=element_text(size=18),  
+        axis.ticks.x=element_blank(),
+        axis.title.y = element_text(angle = 0, size=18),
+        plot.title = element_text(size = 18, face = "bold"),
+        legend.text=element_text(size=16),
+        legend.title=element_text(size=18),
+        axis.text=element_text(size=16)) +
+  ggtitle("SV counts in non-repetitive genome regions")
+ggsave("nonRep_sv_counts.png")
+```
+```{r}
+counts_indel2 <- counts %>% filter(Source=="small_indels") %>% filter(Region=="nonRep")
+counts_indel2 <- dcast(counts_indel2, ID+Superpopulation+Type~Genotype, value.var="Count", fun.aggregat=sum)
+counts_indel2$Count <- counts_indel2$HET + counts_indel2$HOMALT
+counts_indel2 <- rename(counts_indel2, Sample=ID)
+
+ggplot(counts_indel2, aes(x=Sample, y=Count, fill=Type)) +
+  geom_bar(stat="identity") +
+  theme_bw() +
+  theme(axis.text.x=element_blank(),
+        axis.title.x=element_text(size=18),  
+        axis.ticks.x=element_blank(),
+        axis.title.y = element_text(angle = 0, size=18),
+        plot.title = element_text(size = 18, face = "bold"),
+        legend.text=element_text(size=16),
+        legend.title=element_text(size=18),
+        axis.text=element_text(size=16)) +
+  scale_y_continuous(labels = comma) +
+  ggtitle("Indel counts in non-repetitive genome regions")
+ggsave("nonRep_indel_counts_by_type.png")
+```
+```{r}
+counts_indel2 <- counts %>% filter(Source=="small_indels" & Region=="all")
+counts_indel2 <- dcast(counts_indel2, ID+Superpopulation+Type~Genotype, value.var="Count", fun.aggregat=sum)
+counts_indel2$Count <- counts_indel2$HET + counts_indel2$HOMALT
+counts_indel2 <- rename(counts_indel2, Sample=ID)
+
+ggplot(counts_indel2, aes(x=Sample, y=Count, fill=Type)) +
+  geom_bar(stat="identity") +
+  theme_bw() +
+  theme(axis.text.x=element_blank(),
+        axis.title.x=element_text(size=18),  
+        axis.ticks.x=element_blank(),
+        axis.title.y = element_text(angle = 0, size=18),
+        plot.title = element_text(size = 18, face = "bold"),
+        legend.text=element_text(size=16),
+        legend.title=element_text(size=18),
+        axis.text=element_text(size=16)) +
+  scale_y_continuous(labels = comma) +
+  ggtitle("Indel counts genome-wide")
+ggsave("indel_counts_by_type_genome_wide.png")
+```
+
+```{r}
+counts_indel2 <- counts %>% filter(Source=="small_indels" & Region=="str")
+counts_indel2 <- dcast(counts_indel2, ID+Superpopulation+Type~Genotype, value.var="Count", fun.aggregat=sum)
+counts_indel2$Count <- counts_indel2$HET + counts_indel2$HOMALT
+counts_indel2 <- rename(counts_indel2, Sample=ID)
+
+ggplot(counts_indel2, aes(x=Sample, y=Count, fill=Type)) +
+  geom_bar(stat="identity") +
+  theme_bw() +
+  theme(axis.text.x=element_blank(),
+        axis.title.x=element_text(size=18),  
+        axis.ticks.x=element_blank(),
+        axis.title.y = element_text(angle = 0, size=18),
+        plot.title = element_text(size = 18, face = "bold"),
+        legend.text=element_text(size=16),
+        legend.title=element_text(size=18),
+        axis.text=element_text(size=16)) +
+  scale_y_continuous(labels = comma) +
+  ggtitle("Indel counts in STR regions")
+ggsave("indel_counts_by_type_str.png")
+```
+
+```{r}
+counts_indel2 <- counts %>% filter(Source=="small_indels" & Region=="segDup")
+counts_indel2 <- dcast(counts_indel2, ID+Superpopulation+Type~Genotype, value.var="Count", fun.aggregat=sum)
+counts_indel2$Count <- counts_indel2$HET + counts_indel2$HOMALT
+counts_indel2 <- rename(counts_indel2, Sample=ID)
+
+ggplot(counts_indel2, aes(x=Sample, y=Count, fill=Type)) +
+  geom_bar(stat="identity") +
+  theme_bw() +
+  theme(axis.text.x=element_blank(),
+        axis.title.x=element_text(size=18),  
+        axis.ticks.x=element_blank(),
+        axis.title.y = element_text(angle = 0, size=18),
+        plot.title = element_text(size = 18, face = "bold"),
+        legend.text=element_text(size=16),
+        legend.title=element_text(size=18),
+        axis.text=element_text(size=16)) +
+  scale_y_continuous(labels = comma) +
+  ggtitle("Indel counts in SegDup regions")
+ggsave("indel_counts_by_type_segDup.png")
+```
+```{r}
+counts_indel2 <- counts %>% filter(Source=="small_indels" & (Region=="segDup" | Region=="str"))
+counts_indel2 <- dcast(counts_indel2, ID+Superpopulation+Type~Genotype, value.var="Count", fun.aggregat=sum)
+counts_indel2$Count <- counts_indel2$HET + counts_indel2$HOMALT
+counts_indel2 <- rename(counts_indel2, Sample=ID)
+
+ggplot(counts_indel2, aes(x=Sample, y=Count, fill=Type)) +
+  geom_bar(stat="identity") +
+  theme_bw() +
+  theme(axis.text.x=element_blank(),
+        axis.title.x=element_text(size=18),  
+        axis.ticks.x=element_blank(),
+        axis.title.y = element_text(angle = 0, size=18),
+        plot.title = element_text(size = 18, face = "bold"),
+        legend.text=element_text(size=16),
+        legend.title=element_text(size=18),
+        axis.text=element_text(size=16)) +
+  scale_y_continuous(labels = comma) +
+  ggtitle("Indel counts in repetitive regions")
+ggsave("indel_counts_by_type_rep.png")
+```
+
+```{r}
+counts_indel <- counts %>% filter(Source=="small_indels") %>% filter(Region=="nonRep")
+counts_indel <- dcast(counts_indel, ID+Superpopulation+Genotype~Type, value.var="Count", fun.aggregate=sum)
+counts_indel$Total <- counts_indel$DEL + counts_indel$INS
+```
+
+```{r}
+ggplot(counts_indel, aes(x=ID, y=Total, fill=Genotype)) +
+  geom_bar(stat="identity") +
+  theme_bw() +
+  theme(axis.text.x=element_blank(),
+        axis.title.x=element_text(size=18),  
+        axis.ticks.x=element_blank(),
+        axis.title.y = element_text(angle = 0, size=18),
+        plot.title = element_text(size = 18, face = "bold"),
+        legend.text=element_text(size=16),
+        legend.title=element_text(size=18),
+        axis.text=element_text(size=16)) +
+  ggtitle("Indel counts in non-repetitive genome regions")
+ggsave("nonRep_indel_counts.png")
+```
+
+```{r}
+counts_snv <- counts %>% filter(Source=="snps" & Region=="nonRep")
+ggplot(counts_snv, aes(x=ID, y=Count, fill=Genotype)) +
+  geom_bar(stat="identity") +
+  theme_bw() +
+  theme(axis.text.x=element_blank(),
+        axis.title.x=element_text(size=18),  
+        axis.ticks.x=element_blank(),
+        axis.title.y = element_text(angle = 0, size=18),
+        plot.title = element_text(size = 18, face = "bold"),
+        legend.text=element_text(size=16),
+        legend.title=element_text(size=18),
+        axis.text=element_text(size=16)) +
+  scale_y_continuous(labels = comma) +
+  ggtitle("SNV counts in non-repetitive genome regions")
+ggsave("nonRep_snv_counts_by_genotype.png")
+```
+
+```{r}
+counts_snv2 <- rename(counts_snv, Sample=ID)
+ggplot(counts_snv2, aes(x=Sample, y=Count)) +
+  geom_bar(stat="identity") +
+  theme_bw() +
+  theme(axis.text.x=element_blank(),
+        axis.title.x=element_text(size=18),  
+        axis.ticks.x=element_blank(),
+        axis.title.y = element_text(angle = 0, size=18),
+        plot.title = element_text(size = 18, face = "bold"),
+        legend.text=element_text(size=16),
+        legend.title=element_text(size=18),
+        axis.text=element_text(size=16)) +
+  scale_y_continuous(labels = comma) +
+  ggtitle("SNV counts in non-repetitive genome regions")
+ggsave("nonRep_snv_counts.png")
+```
+```{r}
+counts_snv3 <- counts %>% filter(Source=="snps", Region=="all")
+counts_snv3 <- rename(counts_snv3, Sample=ID)
+ggplot(counts_snv3, aes(x=Sample, y=Count)) +
+  geom_bar(stat="identity") +
+  theme_bw() +
+  theme(axis.text.x=element_blank(),
+        axis.title.x=element_text(size=18),  
+        axis.ticks.x=element_blank(),
+        axis.title.y = element_text(angle = 0, size=18),
+        plot.title = element_text(size = 18, face = "bold"),
+        legend.text=element_text(size=16),
+        legend.title=element_text(size=18),
+        axis.text=element_text(size=16)) +
+  scale_y_continuous(labels = comma) +
+  ggtitle("SNV counts genome-wide")
+ggsave("snv_counts_genome_wide.png")
+```
+```{r}
+counts_snv3 <- counts %>% filter(Source=="snps", Region=="str")
+counts_snv3 <- rename(counts_snv3, Sample=ID)
+ggplot(counts_snv3, aes(x=Sample, y=Count)) +
+  geom_bar(stat="identity") +
+  theme_bw() +
+  theme(axis.text.x=element_blank(),
+        axis.title.x=element_text(size=18),  
+        axis.ticks.x=element_blank(),
+        axis.title.y = element_text(angle = 0, size=18),
+        plot.title = element_text(size = 18, face = "bold"),
+        legend.text=element_text(size=16),
+        legend.title=element_text(size=18),
+        axis.text=element_text(size=16)) +
+  scale_y_continuous(labels = comma) +
+  ggtitle("SNV counts in STR regions")
+ggsave("snv_counts_str.png")
+```
+
+```{r}
+counts_snv3 <- counts %>% filter(Source=="snps", Region=="segDup")
+counts_snv3 <- rename(counts_snv3, Sample=ID)
+ggplot(counts_snv3, aes(x=Sample, y=Count)) +
+  geom_bar(stat="identity") +
+  theme_bw() +
+  theme(axis.text.x=element_blank(),
+        axis.title.x=element_text(size=18),  
+        axis.ticks.x=element_blank(),
+        axis.title.y = element_text(angle = 0, size=18),
+        plot.title = element_text(size = 18, face = "bold"),
+        legend.text=element_text(size=16),
+        legend.title=element_text(size=18),
+        axis.text=element_text(size=16)) +
+  scale_y_continuous(labels = comma) +
+  ggtitle("SNV counts in SegDup regions")
+ggsave("snv_counts_segDup.png")
+```
+
+```{r}
+counts_snv3 <- counts %>% filter(Source=="snps", (Region=="segDup" | Region=="str"))
+counts_snv3 <- rename(counts_snv3, Sample=ID)
+ggplot(counts_snv3, aes(x=Sample, y=Count)) +
+  geom_bar(stat="identity") +
+  theme_bw() +
+  theme(axis.text.x=element_blank(),
+        axis.title.x=element_text(size=18),  
+        axis.ticks.x=element_blank(),
+        axis.title.y = element_text(angle = 0, size=18),
+        plot.title = element_text(size = 18, face = "bold"),
+        legend.text=element_text(size=16),
+        legend.title=element_text(size=18),
+        axis.text=element_text(size=16)) +
+  scale_y_continuous(labels = comma) +
+  ggtitle("SNV counts in repetitive regions")
+ggsave("snv_counts_rep.png")
+```
+
+```{r}
+a <- counts_snv[,c("ID", "Superpopulation", "Genotype", "Count")]
+a$Type <- "SNV"
+b <- counts_indel[,c("ID", "Superpopulation", "Genotype", "Total")]
+b <- rename(b, Count=Total)
+b$Type <- "Indel"
+c <- counts_sv[,c("ID", "Superpopulation", "Genotype", "Total")]
+c <- rename(c, Count=Total)
+c$Type <- "SV"
+all_nonRep <- rbind(a, b, c)
+all_nonRep$Type <- factor(all_nonRep$Type, levels=c("SNV", "Indel", "SV"))
+all_nonRep <- rename(all_nonRep, Sample=ID)
+
+ggplot(all_nonRep, aes(x=Sample, y=Count, fill=Genotype)) +
+  geom_bar(stat="identity") +
+  facet_wrap(facet="Type", scales="free") +
+  theme_bw() +
+  theme(axis.text.x=element_blank(),
+        axis.title.x=element_text(size=18),  
+        axis.ticks.x=element_blank(),
+        axis.title.y = element_text(angle = 0, size=18),
+        plot.title = element_text(size = 18, face = "bold"),
+        legend.text=element_text(size=16),
+        legend.title=element_text(size=18),
+        axis.text=element_text(size=16)) +
+  scale_y_continuous(labels = comma) +
+  ggtitle("Variant counts in non-repetitive genome regions")
+ggsave("nonRep_summary_counts.png", width=15, height=5, units="in")
+```
+```{r}
+qc <- read.table(file="qc.tsv", header=TRUE)
+qc <- merge(qc, superpop, by.x="Sample", by.y="ID")
+qc$Sample <- factor(qc$Sample, levels=superpop$ID[order(superpop$Superpopulation)])
+qc$N50 <- qc$N50/1000000
+qc$Length <- qc$Length/1000000000
+qc$Haplotype <- as.character(qc$Haplotype)
+qc$Haplotype[qc$Haplotype=="M"] <- "Maternal"
+qc$Haplotype[qc$Haplotype=="P"] <- "Paternal"
+qc$Haplotype <- as.factor(qc$Haplotype)
+```
+
+```{r}
+ggplot(qc, aes(x=Sample, y=N50, fill=Haplotype)) +
+    geom_bar(stat="identity", position="dodge") +
+    theme_bw() +
+    theme(axis.text.x=element_blank(),
+        axis.title.x=element_text(size=18),  
+        axis.ticks.x=element_blank(),
+        axis.title.y = element_text(angle = 0, size=18),
+        plot.title = element_text(size = 18, face = "bold"),
+        legend.text=element_text(size=16),
+        legend.title=element_text(size=18),
+        axis.text=element_text(size=16)) +
+    scale_y_continuous(labels = comma, name="Mb") +
+    ggtitle("Assembly N50")
+ggsave("assembly_n50_by_haplotype.png")
+```
+```{r}
+ggplot(qc, aes(x=Sample, y=contigs, fill=Haplotype)) +
+    geom_bar(stat="identity", position="dodge") +
+    theme_bw() +
+    theme(axis.text.x=element_blank(),
+        axis.title.x=element_text(size=18),  
+        axis.ticks.x=element_blank(),
+        axis.title.y = element_text(angle = 0, size=18),
+        plot.title = element_text(size = 18, face = "bold"),
+        legend.text=element_text(size=16),
+        legend.title=element_text(size=18),
+        axis.text=element_text(size=16)) +
+    scale_y_continuous(labels = comma, name="#Contigs") +
+    ggtitle("Number of contigs")
+ggsave("assembly_contigs_by_haplotype.png")
+```
+```{r}
+ggplot(qc, aes(x=Sample, y=Length, fill=Haplotype)) +
+    geom_bar(stat="identity", position="dodge") +
+    theme_bw() +
+    theme(axis.text.x=element_blank(),
+        axis.title.x=element_text(size=18),  
+        axis.ticks.x=element_blank(),
+        axis.title.y = element_text(angle = 0, size=18),
+        plot.title = element_text(size = 18, face = "bold"),
+        legend.text=element_text(size=16),
+        legend.title=element_text(size=18),
+        axis.text=element_text(size=16)) +
+    scale_y_continuous(labels = comma, name="Gb") +
+    ggtitle("Assembly Length")
+ggsave("assembly_length_by_haplotype.png")
+```
+
+```{r}
+qc_avg <- rename(dcast(qc, Sample+Superpopulation~., value.var="N50", fun.aggregate=mean), Average_N50=".")
+ggplot(qc_avg, aes(x=Sample, y=Average_N50, fill=Superpopulation)) +
+    geom_bar(stat="identity", position="dodge") +
+    ggtitle("Assembly N50 (average of two haplotypes)")
+ggsave("assembly_n50_average.png")
+```
+
+```{r}
+qc_avg <- rename(dcast(qc, Sample+Superpopulation~., value.var="Length", fun.aggregate=mean), Average_Length=".")
+ggplot(qc_avg, aes(x=Sample, y=Average_Length, fill=Superpopulation)) +
+    geom_bar(stat="identity", position="dodge") +
+    ggtitle("Assembly Length (average of two haplotypes)")
+ggsave("assembly_length_average.png")
+```
