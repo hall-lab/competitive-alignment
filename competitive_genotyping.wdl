@@ -10,6 +10,8 @@ workflow CompetitiveGenotyping {
         File ref_index
         String ref_name
         File fastq_list
+        File segdup_bed
+        File str_bed
     }
     Array[Array[File]] assemblies = read_tsv(assembly_list)
     Array[Array[File]] datasets = read_tsv(dataset_list)
@@ -23,6 +25,8 @@ workflow CompetitiveGenotyping {
             ref=ref,
             ref_index=ref_index,
             ref_name=ref_name,
+            segdup_bed=segdup_bed,
+            str_bed=str_bed
 #            fastq_list=fastq_list
         }
     }
@@ -51,6 +55,9 @@ workflow CompetitiveGenotyping {
         Array[File] small_variants_ref1 = call_variants.small_variants_ref1
         Array[File] small_variants_ref2 = call_variants.small_variants_ref2
         Array[File] small_variants_self = call_variants.small_variants_self
+        Array[File] small_variants_ref_combined = call_variants.small_variants_ref_combined
+        Array[File] small_variants_ref_combined_index = call_variants.small_variants_ref_combined_index
+        Array[File] sv_combined = call_variants.sv_combined
 #        Array[File] marker_counts = genotype.marker_counts
     }
 }
