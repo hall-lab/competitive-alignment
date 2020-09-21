@@ -9,7 +9,6 @@ workflow CompetitiveGenotyping {
         File ref
         File ref_index
         String ref_name
-        File fastq_list
         File segdup_bed
         File str_bed
     }
@@ -27,7 +26,7 @@ workflow CompetitiveGenotyping {
             ref_name=ref_name,
             segdup_bed=segdup_bed,
             str_bed=str_bed
-#            fastq_list=fastq_list
+#            fastq_list=assembly[3]
         }
     }
 
