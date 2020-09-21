@@ -171,6 +171,21 @@ workflow CallAssemblyVariants {
             assembly_name = assembly_name
     }
 
+    call count_self_variants {
+        input:
+            novel_vcf_self = combine_small_variants_vcf.novel_vcf_self,
+            known_vcf_self = combine_small_variants_vcf.known_vcf_self,
+            unique_vcf_ref = combine_small_variants_vcf.unique_vcf_ref,
+            nonunique_vcf_ref = combine_small_variants_vcf.nonunique_vcf_ref,
+            novel_vcf_self_index = combine_small_variants_vcf.novel_vcf_self_index,
+            known_vcf_self_index = combine_small_variants_vcf.known_vcf_self_index,
+            unique_vcf_ref_index = combine_small_variants_vcf.unique_vcf_ref_index,
+            nonunique_vcf_ref_index = combine_small_variants_vcf.nonunique_vcf_ref_index,
+            segdup_bed = segdup_bed,
+            str_bed = str_bed,
+            assembly_name = assembly_name
+    }
+
     output {
         File sv_ref1 = call_sv1_ref.bedpe
         File sv_ref2 = call_sv2_ref.bedpe
@@ -182,6 +197,7 @@ workflow CallAssemblyVariants {
         File small_variants_ref_combined_index = combine_small_variants_vcf.combined_vcf_ref_index
         File sv_combined = combine_sv.bedpe
         File counts = count_variants.counts
+        File self_counts = count_self_variants.counts
     #    File small_variants_marker_positions = combine_small_variants.marker_positions
     #    File small_variant_support_ref_contigs1 = get_read_support.small_variant_support_ref_contigs1
     #    File small_variant_support_ref_contigs2 = get_read_support.small_variant_support_ref_contigs2
@@ -229,6 +245,47 @@ task combine_sv {
     }
     output {
         File bedpe = "ref1_ref2.bedpe"
+    }
+}
+
+task count_self_variants {
+    input {
+        File novel_vcf_self
+        File known_vcf_self
+        File unique_vcf_ref
+        File nonunique_vcf_ref
+        File novel_vcf_self_index
+        File known_vcf_self_index
+        File unique_vcf_ref_index
+        File nonunique_vcf_ref_index
+        File segdup_bed
+        File str_bed
+        String assembly_name
+    }
+    command <<<
+        BEDTOOLS=/opt/hall-lab/bedtools
+        GREP=/bin/grep
+        STR_BED=str.bed
+        SEGDUP_BED=segdup.bed
+        cat ~{str_bed} | grep -v "^track" | sed 's/^/chr/' > $STR_BED
+        cat ~{segdup_bed} | grep -v "^track" | sed 's/^/chr/' > $SEGDUP_BED
+        rm -f counts.txt
+        touch counts.txt
+        zcat ~{novel_vcf_self} | grep -v "^#" | awk 'length($4)==1 && length($5)==1' | cut -f 10 | sort | uniq -c | sed 's/[[:space:]]\+/\t/g' | sed 's/^\t//' | sed 's/^/self\tunique\tall\t/' >> counts.txt
+        zcat ~{known_vcf_self} | grep -v "^#" | awk 'length($4)==1 && length($5)==1' | cut -f 10 | sort | uniq -c | sed 's/[[:space:]]\+/\t/g' | sed 's/^\t//' | sed 's/^/self\tnonunique\tall\t/' >> counts.txt
+        zcat ~{nonunique_vcf_ref} | grep -v "^#" | awk 'length($4)==1 && length($5)==1' | cut -f 10 | sort | uniq -c | sed 's/[[:space:]]\+/\t/g' | sed 's/^\t//' | sed 's/^/ref\tnonunique\tall\t/' >> counts.txt
+        zcat ~{unique_vcf_ref} | grep -v "^#" | awk 'length($4)==1 && length($5)==1' | cut -f 10 | sort | uniq -c | sed 's/[[:space:]]\+/\t/g' | sed 's/^\t//' | sed 's/^/ref\tunique\tall\t/' >> counts.txt
+        $BEDTOOLS intersect -v -a <(cat <(zcat ~{nonunique_vcf_ref} | $GREP "^#") <($BEDTOOLS intersect -v -a ~{nonunique_vcf_ref} -b $STR_BED)) -b $SEGDUP_BED | grep -v "^#" | awk 'length($4)==1 && length($5)==1' | cut -f 10 | sort | uniq -c | sed 's/[[:space:]]\+/\t/g' | sed 's/^\t//' | sed 's/^/ref\tnonunique\tnonRep\t/' >> counts.txt
+        $BEDTOOLS intersect -v -a <(cat <(zcat ~{unique_vcf_ref} | $GREP "^#") <($BEDTOOLS intersect -v -a ~{unique_vcf_ref} -b $STR_BED)) -b $SEGDUP_BED | grep -v "^#" | awk 'length($4)==1 && length($5)==1' | cut -f 10 | sort | uniq -c | sed 's/[[:space:]]\+/\t/g' | sed 's/^\t//' | sed 's/^/ref\tunique\tnonRep\t/' >> counts.txt
+        cat counts.txt | sed 's/^/~{assembly_name}\t/' > tmp
+        mv tmp counts.txt
+    >>>
+    runtime {
+        memory: "16G"
+        docker: "apregier/analyze_assemblies@sha256:4cd67e009ae65820772265b572fc8cb9ce9e6e09228d1d73ee1f5d9118e91fca"
+    }
+    output {
+        File counts = "counts.txt"
     }
 }
 
@@ -325,6 +382,23 @@ task combine_small_variants_vcf {
         $TABIX -fp vcf ref2_het.vcf.gz
         $BCFTOOLS concat -a -d all ref1_ref2_homozygous.vcf.gz ref1_het.vcf.gz ref2_het.vcf.gz -o small_variants.combined.vcf.gz -O z
         $TABIX -fp vcf small_variants.combined.vcf.gz
+
+        $BCFTOOLS isec -c snps -p tmp2 ~{small_variants_self} ~{small_variants2_ref_by_query}
+        $BCFTOOLS query -f '%ID\n' tmp2/0002.vcf > self_in_ref2
+        $BCFTOOLS query -f '%ID\n' tmp2/0003.vcf > ref2_in_self
+        $BCFTOOLS isec -c snps -p tmp3 ~{small_variants_self_by_query} ~{small_variants1_ref_by_query}
+        $BCFTOOLS query -f '%ID\n' tmp3/0002.vcf > self_in_ref1
+        $BCFTOOLS query -f '%ID\n' tmp3/0003.vcf > ref1_in_self
+        cat self_in_ref2 self_in_ref1 > known_from_self
+        cat ref2_in_self ref1_in_self > known_from_ref
+        $BCFTOOLS view -i '%ID!=@known_from_self' ~{small_variants_self} | $BGZIP -c > self_novel_small_variants.vcf.gz
+        $BCFTOOLS view -i '%ID==@known_from_self' ~{small_variants_self} | $BGZIP -c > self_known_small_variants.vcf.gz
+        $BCFTOOLS view -i '%ID!=@known_from_ref' small_variants.combined.vcf.gz | $BGZIP -c > ref_unique_small_variants.vcf.gz
+        $BCFTOOLS view -i '%ID==@known_from_ref' small_variants.combined.vcf.gz | $BGZIP -c > ref_nonunique_small_variants.vcf.gz
+        $TABIX -fp vcf self_novel_small_variants.vcf.gz
+        $TABIX -fp vcf self_known_small_variants.vcf.gz
+        $TABIX -fp vcf ref_unique_small_variants.vcf.gz
+        $TABIX -fp vcf ref_nonunique_small_variants.vcf.gz
     >>>
     runtime {
         memory: "64G"
@@ -333,6 +407,14 @@ task combine_small_variants_vcf {
     output {
         File combined_vcf_ref = "small_variants.combined.vcf.gz"
         File combined_vcf_ref_index = "small_variants.combined.vcf.gz.tbi"
+        File novel_vcf_self = "self_novel_small_variants.vcf.gz"
+        File known_vcf_self = "self_known_small_variants.vcf.gz"
+        File unique_vcf_ref = "ref_unique_small_variants.vcf.gz"
+        File nonunique_vcf_ref = "ref_nonunique_small_variants.vcf.gz"
+        File novel_vcf_self_index = "self_novel_small_variants.vcf.gz.tbi"
+        File known_vcf_self_index = "self_known_small_variants.vcf.gz.tbi"
+        File unique_vcf_ref_index = "ref_unique_small_variants.vcf.gz.tbi"
+        File nonunique_vcf_ref_index = "ref_nonunique_small_variants.vcf.gz.tbi"
     }
 }
 
@@ -355,7 +437,7 @@ task combine_small_variants {
     >>>
     runtime {
         memory: "64G"
-        docker: "apregier/analyze_assemblies@sha256:54669591da03e517f61097f93f8eac512368ae503954276b0149b13ebae0aec4"
+        docker: "apregier/analyze_assemblies@sha256:4cd67e009ae65820772265b572fc8cb9ce9e6e09228d1d73ee1f5d9118e91fca"
     }
     output {
         File fasta = "small_variants.combined.fasta"
