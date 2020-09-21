@@ -257,8 +257,8 @@ task count_variants {
         $BEDTOOLS pairtobed -a <($BEDTOOLS pairtobed -a ~{sv_bedpe} -b $STR_BED -type neither) -b $SEGDUP_BED -type neither > sv.nonRep.bedpe
         rm -f counts.txt
         cat ~{sv_bedpe} | cut -f 7 | cut -f 1-2 -d . | sort | uniq -c | sed 's/[[:space:]]\+/\t/g' | sed 's/^\t//' | sed 's/^/sv\tall\t/' | sed 's/\./\t/' >> counts.txt
-        cat sv.str.bedpe | cut -f 7 | cut -f 1-2 -d . | sort | uniq -c | sed 's/[[:space:]]\+/\t/g' | sed 's/^\t//' | sed 's/^/sv\tstr\t/' | sed 's/\./\t/' >> counts.txt
-        cat sv.segDup.bedpe | cut -f 7 | cut -f 1-2 -d . | sort | uniq -c | sed 's/[[:space:]]\+/\t/g' | sed 's/^\t//' | sed 's/^/sv\tsegDup\t/' | sed 's/\./\t/' >> counts.txt
+        cat sv.str.bedpe | cut -f 1-7 | uniq | cut -f 7 | cut -f 1-2 -d . | sort | uniq -c | sed 's/[[:space:]]\+/\t/g' | sed 's/^\t//' | sed 's/^/sv\tstr\t/' | sed 's/\./\t/' >> counts.txt
+        cat sv.segDup.bedpe | cut -f 1-7 | uniq | cut -f 7 | cut -f 1-2 -d . | sort | uniq -c | sed 's/[[:space:]]\+/\t/g' | sed 's/^\t//' | sed 's/^/sv\tsegDup\t/' | sed 's/\./\t/' >> counts.txt
         cat sv.nonRep.bedpe | cut -f 7 | cut -f 1-2 -d . | sort | uniq -c | sed 's/[[:space:]]\+/\t/g' | sed 's/^\t//' | sed 's/^/sv\tnonRep\t/' | sed 's/\./\t/' >> counts.txt
         $PYTHON $VCFTOBEDPE -i ~{small_variants_vcf} -o indels.bedpe -m 1 -M 49
         #$PYTHON $SVLENTHS -v ~{small_variants_vcf} -o indel_lengths.txt
@@ -268,17 +268,17 @@ task count_variants {
         $BEDTOOLS pairtobed -a <($BEDTOOLS pairtobed -a large_indels.bedpe -b $STR_BED -type neither) -b $SEGDUP_BED -type either > large_indels.segDup.bedpe
         $BEDTOOLS pairtobed -a <($BEDTOOLS pairtobed -a large_indels.bedpe -b $STR_BED -type neither) -b $SEGDUP_BED -type neither > large_indels.nonRep.bedpe
         paste <(grep -v GENOTYPE large_indels.bedpe | cut -f 8) <(grep -v GENOTYPE large_indels.bedpe | cut -f 7) | sort | uniq -c | sed 's/[[:space:]]\+/\t/g' | sed 's/^\t//' | sed 's/^/indels\tall\t/' >> counts.txt
-        paste <(grep -v GENOTYPE large_indels.str.bedpe | cut -f 8) <(grep -v GENOTYPE large_indels.str.bedpe | cut -f 7) | sort | uniq -c | sed 's/[[:space:]]\+/\t/g' | sed 's/^\t//' | sed 's/^/indels\tstr\t/' >> counts.txt
-        paste <(grep -v GENOTYPE large_indels.segDup.bedpe | cut -f 8) <(grep -v GENOTYPE large_indels.segDup.bedpe | cut -f 7) | sort | uniq -c | sed 's/[[:space:]]\+/\t/g' | sed 's/^\t//' | sed 's/^/indels\tsegDup\t/' >> counts.txt
+        paste <(grep -v GENOTYPE large_indels.str.bedpe | cut -f 1-8 | uniq | cut -f 8) <(grep -v GENOTYPE large_indels.str.bedpe | cut -f 1-8 | uniq | cut -f 7) | sort | uniq -c | sed 's/[[:space:]]\+/\t/g' | sed 's/^\t//' | sed 's/^/indels\tstr\t/' >> counts.txt
+        paste <(grep -v GENOTYPE large_indels.segDup.bedpe | cut -f 1-8 | uniq | cut -f 8) <(grep -v GENOTYPE large_indels.segDup.bedpe | cut -f 1-8 | uniq | cut -f 7) | sort | uniq -c | sed 's/[[:space:]]\+/\t/g' | sed 's/^\t//' | sed 's/^/indels\tsegDup\t/' >> counts.txt
         paste <(grep -v GENOTYPE large_indels.nonRep.bedpe | cut -f 8) <(grep -v GENOTYPE large_indels.nonRep.bedpe | cut -f 7) | sort | uniq -c | sed 's/[[:space:]]\+/\t/g' | sed 's/^\t//' | sed 's/^/indels\tnonRep\t/' >> counts.txt
         $BEDTOOLS pairtobed -a indels.bedpe -b $STR_BED -type either > indels.str.bedpe
         $BEDTOOLS pairtobed -a indels.bedpe -b $SEGDUP_BED -type either > indels.allSegDup.bedpe
         $BEDTOOLS pairtobed -a <($BEDTOOLS pairtobed -a indels.bedpe -b $STR_BED -type neither) -b $SEGDUP_BED -type either > indels.segDup.bedpe
         $BEDTOOLS pairtobed -a <($BEDTOOLS pairtobed -a indels.bedpe -b $STR_BED -type neither) -b $SEGDUP_BED -type neither > indels.nonRep.bedpe
         paste <(grep -v GENOTYPE indels.bedpe | cut -f 8) <(grep -v GENOTYPE indels.bedpe | cut -f 7) | sort | uniq -c | sed 's/[[:space:]]\+/\t/g' | sed 's/^\t//' | sed 's/^/small_indels\tall\t/' >> counts.txt
-        paste <(grep -v GENOTYPE indels.str.bedpe | cut -f 8) <(grep -v GENOTYPE indels.str.bedpe | cut -f 7) | sort | uniq -c | sed 's/[[:space:]]\+/\t/g' | sed 's/^\t//' | sed 's/^/small_indels\tstr\t/' >> counts.txt
-        paste <(grep -v GENOTYPE indels.segDup.bedpe | cut -f 8) <(grep -v GENOTYPE indels.segDup.bedpe | cut -f 7) | sort | uniq -c | sed 's/[[:space:]]\+/\t/g' | sed 's/^\t//' | sed 's/^/small_indels\tsegDup\t/' >> counts.txt
-        paste <(grep -v GENOTYPE indels.nonRep.bedpe | cut -f 8) <(grep -v GENOTYPE indels.nonRep.bedpe | cut -f 7) | sort | uniq -c | sed 's/[[:space:]]\+/\t/g' | sed 's/^\t//' | sed 's/^/small_indels\tnonRep\t/' >> counts.txt
+        paste <(grep -v GENOTYPE indels.str.bedpe | cut -f 1-8 | uniq | cut -f 8) <(grep -v GENOTYPE indels.str.bedpe | cut -f 1-8 | uniq | cut -f 7) | sort | uniq -c | sed 's/[[:space:]]\+/\t/g' | sed 's/^\t//' | sed 's/^/small_indels\tstr\t/' >> counts.txt
+        paste <(grep -v GENOTYPE indels.segDup.bedpe | cut -f 1-8 | uniq | cut -f 8) <(grep -v GENOTYPE indels.segDup.bedpe | cut -f 1-8 | uniq | cut -f 7) | sort | uniq -c | sed 's/[[:space:]]\+/\t/g' | sed 's/^\t//' | sed 's/^/small_indels\tsegDup\t/' >> counts.txt
+        paste <(grep -v GENOTYPE indels.nonRep.bedpe | cut -f 1-8 | uniq | cut -f 8) <(grep -v GENOTYPE indels.nonRep.bedpe | cut -f 1-8 | uniq | cut -f 7) | sort | uniq -c | sed 's/[[:space:]]\+/\t/g' | sed 's/^\t//' | sed 's/^/small_indels\tnonRep\t/' >> counts.txt
         zcat ~{small_variants_vcf} | grep -v "^#" | awk 'length($4)==1 && length($5)==1' | cut -f 10 | sort | uniq -c | sed 's/[[:space:]]\+/\t/g' | sed 's/^\t//' | sed 's/^/snps\tall\t/' | awk 'BEGIN {OFS = "\t" ;}{print $1,$2,$3,"SNP",$4}' >> counts.txt
         $BEDTOOLS intersect -u -a ~{small_variants_vcf} -b $STR_BED | grep -v "^#" | awk 'length($4)==1 && length($5)==1' | cut -f 10 | sort | uniq -c | sed 's/[[:space:]]\+/\t/g' | sed 's/^\t//' | sed 's/^/snps\tstr\t/' | awk 'BEGIN {OFS = "\t" ;}{print $1,$2,$3,"SNP",$4}' >> counts.txt
         $BEDTOOLS intersect -u -a <(cat <(zcat ~{small_variants_vcf} | $GREP "^#") <($BEDTOOLS intersect -v -a ~{small_variants_vcf} -b $STR_BED)) -b $SEGDUP_BED | grep -v "^#" | awk 'length($4)==1 && length($5)==1' | cut -f 10 | sort | uniq -c | sed 's/[[:space:]]\+/\t/g' | sed 's/^\t//' | sed 's/^/snps\tsegDup\t/' | awk 'BEGIN {OFS = "\t" ;}{print $1,$2,$3,"SNP",$4}' >> counts.txt
