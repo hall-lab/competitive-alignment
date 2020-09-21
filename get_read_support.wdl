@@ -99,10 +99,49 @@ workflow GetReadSupport {
             read_support = collate_small_variant_support_contigs1_contigs2.collated_support
     }
 
+    call correspond_variant_ids {
+        input:
+            ref1_vcf = small_variants_ref_contigs1,
+            ref1_by_query_vcf = small_variants_contigs1_ref,
+            ref2_vcf = small_variants_ref_contigs2,
+            ref2_by_query_vcf = small_variants_contigs2_ref,
+            self_vcf = small_variants_ref_contigs1_contigs2,
+            self_by_query_vcf = small_variants_contigs2_contigs1
+    }
+
     output {
         File small_variant_support_ref_contigs1 = combine_small_variant_support_ref_contigs1.total_read_support
         File small_variant_support_ref_contigs2 = combine_small_variant_support_ref_contigs2.total_read_support
         File small_variant_support_contigs1_contigs2 = combine_small_variant_support_contigs1_contigs2.total_read_support
+    }
+}
+
+task correspond_variant_ids {
+    input {
+        File ref1_vcf
+        File ref1_by_query_vcf
+        File ref2_vcf
+        File ref2_by_query_vcf
+        File self_vcf
+        File self_by_query_vcf
+    }
+    command <<<
+        set -exo pipefail
+        join -j2 <(zcat ~{ref1_vcf} | grep -v "^#" | sed 's/	/_/' | cut -f 1,2 | sort -k2) <(zcat ~{ref1_by_query_vcf} | grep -v "^#" | sed 's/	/_/' | cut -f 1,2 | sort -k2) > ref1.txt
+        join -j2 <(zcat ~{ref2_vcf} | grep -v "^#" | sed 's/	/_/' | cut -f 1,2 | sort -k2) <(zcat ~{ref2_by_query_vcf} | grep -v "^#" | sed 's/	/_/' | cut -f 1,2 | sort -k2) > ref2.txt
+        join -j2 <(zcat ~{self_vcf} | grep -v "^#" | sed 's/v   /_/' | cut -f 1,2 | sort -k2) <(zcat ~{self_by_query_vcf} | grep -v "^#" | sed 's/	/_/' | cut -f 1,2 | sort -k2) > self.txt
+        join -1 3 -2 3 <(sort -k3 ref1.txt) <(sort -k3 self.txt) > ref1_self.txt
+        join -1 3 -2 2 <(sort -k3 ref2.txt) <(sort -k2 self.txt) > ref2_self.txt
+        join -1 2 -2 2 <(sort -k2 ref1.txt) <(sort -k2 ref2.txt) > ref1_ref2.txt
+    >>>
+    runtime {
+        memory: "16G"
+        docker: "apregier/analyze_assemblies@sha256:4cd67e009ae65820772265b572fc8cb9ce9e6e09228d1d73ee1f5d9118e91fca"
+    }
+    output {
+        File ref1_self = "ref1_self.txt"
+        File ref2_self = "ref2_self.txt"
+        File ref1_ref2 = "ref1_ref2.txt"
     }
 }
 
