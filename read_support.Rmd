@@ -1,0 +1,118 @@
+---
+title: "Read support for assembly variants"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+```{r}
+library(ggplot2)
+```
+
+```{r}
+read_support <- read.table("contigs2_contigs1_support.txt", header=FALSE, col.names=c("id", "h1", "h2"))
+#read_support <- read.table("ref_contigs1_support.txt", header=FALSE, col.names=c("id", "h1", "h2"))
+#read_support <- read.table("contigs2_ref.support.txt", header=FALSE, col.names=c("id", "h1", "h2"))
+```
+
+```{r}
+ref1_self_mapping <- read.table("ref1_self.txt", header=FALSE, col.names=c("contig1_pos", "ref1_id", "ref_pos", "self_id", "contig2_pos"))
+ref2_self_mapping <- read.table("ref2_self.txt", header=FALSE, col.names=c("contig2_pos", "ref2_id", "ref_pos", "self_id", "contig1_pos"))
+```
+
+```{r}
+contigs2_contigs1_snps <- read.table("contigs2_contigs1.snps.txt", header=FALSE, col.names=c("id"))
+contigs2_contigs1_snps$TYPE <- "SNP"
+contigs2_contigs1_ins <- read.table("contigs2_contigs1.ins.txt", header=FALSE, col.names=c("id"))
+contigs2_contigs1_ins$TYPE <- "INS"
+contigs2_contigs1_del <- read.table("contigs2_contigs1.del.txt", header=FALSE, col.names=c("id"))
+contigs2_contigs1_del$TYPE <- "DEL"
+ids <- rbind(contigs2_contigs1_snps, contigs2_contigs1_ins, contigs2_contigs1_del)
+ids$TYPE <- factor(ids$TYPE, levels=c("SNP", "DEL", "INS"))
+```
+
+```{r}
+contigs2_contigs1.genotypes <- read.table("contigs2_contigs1.genotypes.txt", header=FALSE, col.names=c("id", "genotype"))
+read_support <- merge(read_support, contigs2_contigs1.genotypes)
+```
+
+```{r}
+read_support <- merge(read_support, ids, by="id")
+read_support <- read_support[read_support$TYPE=="SNP",]
+read_support <- read_support[read_support$genotype=="0/1",]
+```
+
+```{r}
+giab_ref2 <- read.table("giab_ref2_match.tsv", header=FALSE, col.names=c("chr", "pos"))
+giab_ref2$coord = paste("_", giab_ref2$chr, giab_ref2$pos)
+ref2_ids <- read.table("ref2_ids.tsv", header=FALSE, col.names=c("chr", "pos", "id"))
+ref2_ids$coord = paste("_", ref2_ids$chr, ref2_ids$pos)
+giab_ref2 <- merge(giab_ref2, ref2_ids, by="coord")
+```
+
+```{r}
+giab_ref1 <- read.table("giab_ref1_match.tsv", header=FALSE, col.names=c("chr", "pos"))
+giab_ref1$coord = paste("_", giab_ref1$chr, giab_ref1$pos)
+ref1_ids <- read.table("ref1_ids.tsv", header=FALSE, col.names=c("chr", "pos", "id"))
+ref1_ids$coord = paste("_", ref1_ids$chr, ref1_ids$pos)
+giab_ref1 <- merge(giab_ref1, ref1_ids, by="coord")
+```
+
+```{r}
+read_support1 <- merge(read_support, ref1_self_mapping, by.x="id", by.y="self_id")
+read_support2 <- merge(read_support, ref2_self_mapping, by.x="id", by.y="self_id")
+with_ref_coords <- unique(rbind(read_support1[,c("id", "h1", "h2", "genotype", "TYPE", "contig1_pos", "ref_pos", "contig2_pos")], read_support2[,c("id", "h1", "h2", "genotype", "TYPE", "contig1_pos", "ref_pos", "contig2_pos")]))
+```
+
+```{r}
+read_support1$giab <- FALSE
+read_support1$giab[read_support1$ref1_id %in% giab_ref1$id] <- TRUE
+read_support2$giab <- FALSE
+read_support2$giab[read_support2$ref2_id %in% giab_ref2$id] <- TRUE
+read_support$giab <- "Not in GiaB"
+read_support$giab[read_support$id %in% read_support1$id[read_support1$giab==TRUE]] <- "In GiaB"
+read_support$giab[read_support$id %in% read_support2$id[read_support2$giab==TRUE]] <- "In GiaB"
+read_support$maps_to_ref <- "Not mapped to GRCh38"
+read_support$maps_to_ref[read_support$id %in% read_support1$id] <- "Mapped to GRCh38"
+read_support$maps_to_ref[read_support$id %in% read_support2$id] <- "Mapped to GRCh38"
+```
+
+```{r}
+ggplot(data=read_support, aes(x=h1, y=h2)) +
+  geom_point()
+```
+
+```{r}
+ggplot(data=read_support[read_support$h1+read_support$h2<=100,], aes(x=h1)) +
+  geom_histogram(binwidth=1) +
+  facet_grid(giab~maps_to_ref)
+ggsave("read_support_h1.png")
+
+ggplot(data=read_support[read_support$h1+read_support$h2<=100,], aes(x=h2)) +
+  geom_histogram(binwidth=1) +
+  facet_grid(giab~maps_to_ref)
+ggsave("read_support_h2.png")
+
+ggplot(data=read_support[read_support$h1+read_support$h2<=100,], aes(x=h1+h2)) +
+  geom_histogram(binwidth=1) +
+  facet_grid(giab~maps_to_ref)
+ggsave("read_support_total.png")
+
+ggplot(data=read_support, aes(x=log((h1+.001)/(h2+.001)))) +
+  geom_histogram(binwidth=.1) +
+  facet_grid(giab~maps_to_ref)
+ggsave("read_support_ratio.png")
+```
+
+```{r}
+read_support_filtered <- read_support[read_support$h1+read_support$h2 >= 5,]
+ggplot(data=read_support_filtered, aes(x=h1)) +
+  geom_histogram(binwidth=1)
+
+ggplot(data=read_support_filtered, aes(x=h2)) +
+  geom_histogram(binwidth=1)
+
+ggplot(data=read_support_filtered, aes(x=log((h1+.001)/(h2+.001)))) +
+  geom_histogram(binwidth=.1)
+```
