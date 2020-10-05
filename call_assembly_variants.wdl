@@ -459,7 +459,8 @@ task call_sv {
         SAMTOOLS=/opt/hall-lab/samtools-1.9/bin/samtools
         PYTHON=/opt/hall-lab/python-2.7.15/bin/python
         SPLIT_TO_BEDPE=/opt/hall-lab/scripts/splitReadSamToBedpe
-        BEDPE_TO_BKPTS=/opt/hall-lab/scripts/splitterToBreakpoint
+        #BEDPE_TO_BKPTS=/opt/hall-lab/scripts/splitterToBreakpoint
+        BEDPE_TO_BKPTS=/scratch1/fs1/ccdg/abelhj/assembly_validation/docker/analyze_assemblies/scripts/splitterToBreakpoint1
         SVTOOLS=/opt/hall-lab/python-2.7.15/bin/svtools
         PERL=/usr/bin/perl
         REARRANGE_BREAKPOINTS=/opt/hall-lab/scripts/rearrange_breakpoints.pl
@@ -473,8 +474,8 @@ task call_sv {
         $SAMTOOLS sort -n -T tmp -O bam ~{alignment} > namesorted.bam
         $SAMTOOLS view -h -F 4 namesorted.bam | $PYTHON $SPLIT_TO_BEDPE -i stdin > split.bedpe
         $PYTHON $BEDPE_TO_BKPTS -i split.bedpe -f ~{assembly_name} -q contigs.fa -e ref.fa > breakpoints.bedpe
-        $SVTOOLS bedpesort breakpoints.bedpe | $PERL $REARRANGE_BREAKPOINTS > breakpoints.sorted.bedpe
-        cat <($GREP "^#" breakpoints.sorted.bedpe) <(paste <($GREP -v "^#" breakpoints.sorted.bedpe | cut -f 1-6) <(paste -d : <($GREP -v "^#" breakpoints.sorted.bedpe | cut -f 7) <($GREP -v "^#" breakpoints.sorted.bedpe | cut -f 19 | sed 's/.*SVLEN=/SVLEN=/' | sed 's/;.*//')) <($GREP -v "^#" breakpoints.sorted.bedpe | cut -f 8-)) | $PERL $ADD_ALIGNMENT_GAP_INFO > breakpoints.sorted.fixed.bedpe
+        $SVTOOLS bedpesort breakpoints.bedpe | $PERL $REARRANGE_BREAKPOINTS > breakpoints.sorted.bedpe.1
+        cat <($GREP "^#" breakpoints.sorted.bedpe.1) <(paste <($GREP -v "^#" breakpoints.sorted.bedpe.1 | cut -f 1-6) <(paste -d : <($GREP -v "^#" breakpoints.sorted.bedpe.1 | cut -f 7) <($GREP -v "^#" breakpoints.sorted.bedpe.1 | cut -f 19 | sed 's/.*SVLEN=/SVLEN=/' | sed 's/;.*//')) <($GREP -v "^#" breakpoints.sorted.bedpe.1 | cut -f 8-)) | $PERL $ADD_ALIGNMENT_GAP_INFO > breakpoints.sorted.fixed.bedpe
     mv breakpoints.sorted.fixed.bedpe breakpoints.sorted.bedpe
     >>>
     runtime {
