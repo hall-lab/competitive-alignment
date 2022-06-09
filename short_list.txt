@@ -1,0 +1,3 @@
+HG002	/scratch1/fs1/ccdg/aregier/assemblies/HG002-v0.11.mat.fa.gz	/scratch1/fs1/ccdg/aregier/assemblies/HG002-v0.11.pat.fa.gz	/storage1/fs1/ccdg/Active/analysis/ref_grant/assembly_analysis_20200220/competitive_genotyping_round1/reads_list.txt
+HG00438	/scratch1/fs1/ccdg/aregier/assemblies/HG00438.mat.fa.gz	/scratch1/fs1/ccdg/aregier/assemblies/HG00438.pat.fa.gz	NA
+HG00621	/scratch1/fs1/ccdg/aregier/assemblies/HG00621.mat.fa.gz	/scratch1/fs1/ccdg/aregier/assemblies/HG00621.pat.fa.gz	NA

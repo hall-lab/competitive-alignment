@@ -1,6 +1,6 @@
 version 1.0
 import "convert_to_fasta.wdl" as convert_to_fasta
-import "get_read_support.wdl" as get_read_support
+
 
 workflow CallAssemblyVariants {
     input {
@@ -27,10 +27,29 @@ workflow CallAssemblyVariants {
             ref=ref
     }
 
+    call align_contigs as align_contig1_to_ref_rev {
+        input:
+            contigs=ref,
+            ref=contigs1
+    }
+
+    call align_contigs as align_contig2_to_ref_rev {
+        input:
+            contigs=ref,
+            ref=contigs2
+    }
+
+
     call align_contigs as align_contigs_to_each_other {
         input:
             contigs=contigs1,
             ref=contigs2
+    }
+
+    call align_contigs as align_contigs_to_each_other_rev {
+        input:
+            contigs=contigs2,
+            ref=contigs1
     }
 
     call index_fasta as index_contigs1 {
@@ -61,6 +80,25 @@ workflow CallAssemblyVariants {
             id_prefix="ref2"
     }
 
+
+    call call_small_variants as call_small_variants1_ref_rev {
+        input:
+            alignment=align_contig1_to_ref_rev.bam,
+            ref=index_contigs1.unzipped_fasta,
+            ref_index=index_contigs1.fasta_index,
+            assembly_name=assembly_name,
+            id_prefix="ref1_rev"
+    }
+
+    call call_small_variants as call_small_variants2_ref_rev {
+        input:
+            alignment=align_contig2_to_ref_rev.bam,
+            ref=index_contigs2.unzipped_fasta,
+            ref_index=index_contigs2.fasta_index,
+            assembly_name=assembly_name,
+            id_prefix="ref2_rev"
+    }
+
     call call_small_variants as call_small_variants_self {
         input:
             alignment=align_contigs_to_each_other.bam,
@@ -70,49 +108,84 @@ workflow CallAssemblyVariants {
             id_prefix="self"
     }
 
+    call call_small_variants as call_small_variants_self_rev {
+        input:
+            alignment=align_contigs_to_each_other_rev.bam,
+            ref=index_contigs1.unzipped_fasta,
+            ref_index=index_contigs1.fasta_index,
+            assembly_name=assembly_name,
+            id_prefix="self_rev"
+    }
+
+
+   call call_namesort as call_namesort_sv1_ref {
+       input:
+            alignment=align_contig1_to_ref.bam
+   }
+       
+   call call_namesort as call_namesort_sv2_ref {
+       input:
+            alignment=align_contig2_to_ref.bam
+   }
+
+
+   call call_namesort as call_namesort_sv1_ref_rev {
+       input:
+            alignment=align_contig1_to_ref_rev.bam
+   }
+       
+   call call_namesort as call_namesort_sv2_ref_rev {
+       input:
+            alignment=align_contig2_to_ref_rev.bam
+   }
+       
+   call call_namesort as call_namesort_sv_self {
+       input:
+            alignment=align_contigs_to_each_other.bam
+   }
+
+   call call_namesort as call_namesort_sv_self_rev {
+       input:
+            alignment=align_contigs_to_each_other_rev.bam
+   }
+
     call call_sv as call_sv1_ref {
         input:
-            alignment=align_contig1_to_ref.bam,
-            contigs=index_contigs1.unzipped_fasta,
-            contigs_index=index_contigs1.fasta_index,
-            ref=ref,
-            ref_index=ref_index,
+            namesorted_bam = call_namesort_sv1_ref.namesorted_bam,
             assembly_name=assembly_name
     }
 
     call call_sv as call_sv2_ref {
         input:
-            alignment=align_contig2_to_ref.bam,
-            contigs=index_contigs2.unzipped_fasta,
-            contigs_index=index_contigs2.fasta_index,
-            ref=ref,
-            ref_index=ref_index,
+            namesorted_bam = call_namesort_sv2_ref.namesorted_bam,
+            assembly_name=assembly_name
+    }
+
+
+    call call_sv as call_sv1_ref_rev {
+        input:
+            namesorted_bam = call_namesort_sv1_ref_rev.namesorted_bam,
+            assembly_name=assembly_name
+    }
+
+    call call_sv as call_sv2_ref_rev {
+        input:
+            namesorted_bam = call_namesort_sv2_ref_rev.namesorted_bam,
             assembly_name=assembly_name
     }
 
     call call_sv as call_sv_self {
         input:
-            alignment=align_contigs_to_each_other.bam,
-            contigs=index_contigs1.unzipped_fasta,
-            contigs_index=index_contigs1.fasta_index,
-            ref=index_contigs2.unzipped_fasta,
-            ref_index=index_contigs2.fasta_index,
+            namesorted_bam = call_namesort_sv_self.namesorted_bam,
             assembly_name=assembly_name
     }
 
-    #call get_read_support.GetReadSupport as get_read_support{
-    #    input:
-    #        ref=ref,
-    #        contigs1=contigs1,
-    #        contigs2=contigs2,
-    #        reads_list=fastq_list,
-    #        small_variants_ref_contigs1=call_small_variants1_ref.vcf,
-    #        small_variants_contigs1_ref=call_small_variants1_ref.inverse_vcf,
-    #        small_variants_ref_contigs2=call_small_variants2_ref.vcf,
-    #        small_variants_contigs2_ref=call_small_variants2_ref.inverse_vcf,
-    #        small_variants_contigs1_contigs2=call_small_variants_self.vcf,
-    #        small_variants_contigs2_contigs1=call_small_variants_self.inverse_vcf
-    #}
+    call call_sv as call_sv_self_rev {
+        input:
+            namesorted_bam = call_namesort_sv_self_rev.namesorted_bam,
+            assembly_name=assembly_name
+    }
+
 
     call combine_small_variants_vcf {
         input:
@@ -130,31 +203,6 @@ workflow CallAssemblyVariants {
             small_variants_self_by_query_index = call_small_variants_self.inverse_vcf_index
     }
 
-    #call convert_to_fasta.ConvertToFasta as convert_ref {
-    #    input:
-    #        vcf=combine_small_variants_vcf.combined_vcf_ref,
-    #        vcf_index=combine_small_variants_vcf.combined_vcf_ref_index,
-    #        ref=ref,
-    #        ref_index=ref_index,
-    #        ref_name=ref_name
-    #}
-
-    #call convert_to_fasta.ConvertToFasta as convert_self {
-    #    input:
-    #        vcf=combine_small_variants_vcf.remaining_vcf_contigs,
-    #        vcf_index=combine_small_variants_vcf.remaining_vcf_contigs_index,
-    #        ref=index_contigs2.unzipped_fasta,
-    #        ref_index=index_contigs2.fasta_index,
-    #        ref_name=assembly_name
-    #}
-
-    #call combine_small_variants {
-    #    input:
-    #        small_variants_ref = convert_ref.marker_fasta,
-    #        small_variants_self = convert_self.marker_fasta,
-    #        small_variants_ref_marker_positions = convert_ref.marker_positions,
-    #        small_variants_self_marker_positions = convert_self.marker_positions
-    #}
 
     call combine_sv {
         input:
@@ -189,10 +237,18 @@ workflow CallAssemblyVariants {
     output {
         File sv_ref1 = call_sv1_ref.bedpe
         File sv_ref2 = call_sv2_ref.bedpe
+
+        File sv_ref1_rev = call_sv1_ref_rev.bedpe
+        File sv_ref2_rev = call_sv2_ref_rev.bedpe
         File sv_self = call_sv_self.bedpe
+        File sv_self_rev = call_sv_self_rev.bedpe
         File small_variants_ref1 = call_small_variants1_ref.vcf
         File small_variants_ref2 = call_small_variants2_ref.vcf
+        File small_variants_ref1_rev = call_small_variants1_ref_rev.vcf
+        File small_variants_ref2_rev = call_small_variants2_ref_rev.vcf
+
         File small_variants_self = call_small_variants_self.vcf
+        File small_variants_self_rev = call_small_variants_self_rev.vcf
         File small_variants_ref_combined = combine_small_variants_vcf.combined_vcf_ref
         File small_variants_ref_combined_index = combine_small_variants_vcf.combined_vcf_ref_index
         File sv_combined = combine_sv.bedpe
@@ -212,7 +268,7 @@ task index_fasta {
     command <<<
         set -exo pipefail
         SAMTOOLS=/opt/hall-lab/samtools-1.9/bin/samtools
-        zcat ~{fasta} > unzipped.fa
+        cat ~{fasta} > unzipped.fa
         $SAMTOOLS faidx unzipped.fa
     >>>
     runtime {
@@ -233,11 +289,12 @@ task combine_sv {
     command <<<
         set -exo pipefail
         BEDTOOLS=/opt/hall-lab/bedtools
-        SVTOOLS=/opt/hall-lab/python-2.7.15/bin/svtools
-        $BEDTOOLS pairtopair -type both -a ~{sv_ref1} -b ~{sv_ref2} -is -slop 50 | $SVTOOLS bedpesort | cut -f 1-6,11 | uniq | awk '{print $s ".homalt." NR}' > ref1_ref2_homozygous.bedpe
-        $BEDTOOLS pairtopair -type notboth -a ~{sv_ref1} -b ~{sv_ref2} -is -slop 50 | $SVTOOLS bedpesort | cut -f 1-6,11 | uniq | awk '{print $s ".ref1." NR}' > ref1_het.bedpe
-        $BEDTOOLS pairtopair -type notboth -b ~{sv_ref1} -a ~{sv_ref2} -is -slop 50 | $SVTOOLS bedpesort | cut -f 1-6,11 | uniq | awk '{print $s ".ref2." NR}' > ref2_het.bedpe
-        $SVTOOLS bedpesort <(cat ref1_ref2_homozygous.bedpe ref1_het.bedpe ref2_het.bedpe) > ref1_ref2.bedpe
+        #SVTOOLS=/opt/hall-lab/python-2.7.15/bin/svtools
+        BEDPESORT=/scratch1/fs1/ccdg/abelhj/assembly_validation/docker/analyze_assemblies/scripts/bedpesort
+        $BEDTOOLS pairtopair -type both -a ~{sv_ref1} -b ~{sv_ref2} -is -slop 50 | $BEDPESORT | cut -f 1-6,11 | uniq | awk '{print $s ".homalt." NR}' > ref1_ref2_homozygous.bedpe
+        $BEDTOOLS pairtopair -type notboth -a ~{sv_ref1} -b ~{sv_ref2} -is -slop 50 | $BEDPESORT | cut -f 1-6,11 | uniq | awk '{print $s ".ref1." NR}' > ref1_het.bedpe
+        $BEDTOOLS pairtopair -type notboth -b ~{sv_ref1} -a ~{sv_ref2} -is -slop 50 | $BEDPESORT | cut -f 1-6,11 | uniq | awk '{print $s ".ref2." NR}' > ref2_het.bedpe
+        $BEDPESORT <(cat ref1_ref2_homozygous.bedpe ref1_het.bedpe ref2_het.bedpe) > ref1_ref2.bedpe
     >>>
     runtime {
         memory: "16G"
@@ -445,36 +502,49 @@ task combine_small_variants {
     }
 }
 
-task call_sv {
+task call_namesort {
     input {
         File alignment
-        File contigs
-        File contigs_index
-        File ref
-        File ref_index
+    }
+    command <<<
+        set -exo pipefail
+        SAMTOOLS=/opt/hall-lab/samtools-1.9/bin/samtools
+
+        $SAMTOOLS sort -n -T tmp -O bam ~{alignment} > namesorted.bam
+    >>>
+    runtime {
+        memory: "64G"
+        docker: "apregier/analyze_assemblies@sha256:4cd67e009ae65820772265b572fc8cb9ce9e6e09228d1d73ee1f5d9118e91fca"
+    }
+    output {
+        File namesorted_bam = "namesorted.bam"
+    }
+}
+
+
+task call_sv {
+    input {
+        File namesorted_bam
         String assembly_name
     }
     command <<<
         set -exo pipefail
         SAMTOOLS=/opt/hall-lab/samtools-1.9/bin/samtools
         PYTHON=/opt/hall-lab/python-2.7.15/bin/python
-        SPLIT_TO_BEDPE=/opt/hall-lab/scripts/splitReadSamToBedpe
+        #SPLIT_TO_BEDPE=/opt/hall-lab/scripts/splitReadSamToBedpe
         #BEDPE_TO_BKPTS=/opt/hall-lab/scripts/splitterToBreakpoint
-        BEDPE_TO_BKPTS=/scratch1/fs1/ccdg/abelhj/assembly_validation/docker/analyze_assemblies/scripts/splitterToBreakpoint1
-        SVTOOLS=/opt/hall-lab/python-2.7.15/bin/svtools
+        SPLIT_TO_BEDPE=/storage1/fs1/ccdg/Active/analysis/abelhj/pangenome/cromwell/assembly_validation/docker/analyze_assemblies/scripts/splitReadSamToBedpe2inv
+        BEDPE_TO_BKPTS=/storage1/fs1/ccdg/Active/analysis/abelhj/pangenome/cromwell/assembly_validation/docker/analyze_assemblies/scripts/splitterToBreakpoint2
+        #SVTOOLS=/opt/hall-lab/python-2.7.15/bin/svtools
+        BEDPESORT=/storage1/fs1/ccdg/Active/analysis/abelhj/pangenome/cromwell/assembly_validation/docker/analyze_assemblies/scripts/bedpesort
         PERL=/usr/bin/perl
         REARRANGE_BREAKPOINTS=/opt/hall-lab/scripts/rearrange_breakpoints.pl
         GREP=/bin/grep
         ADD_ALIGNMENT_GAP_INFO=/opt/hall-lab/scripts/add_alignment_gap_info.pl
 
-        ln -s ~{contigs} contigs.fa
-        ln -s ~{contigs_index} contigs.fa.fai
-        ln -s ~{ref} ref.fa
-        ln -s ~{ref_index} ref.fa.fai
-        $SAMTOOLS sort -n -T tmp -O bam ~{alignment} > namesorted.bam
-        $SAMTOOLS view -h -F 4 namesorted.bam | $PYTHON $SPLIT_TO_BEDPE -i stdin > split.bedpe
+        $SAMTOOLS view -h -F 4 ~{namesorted_bam} | $PYTHON $SPLIT_TO_BEDPE -i stdin -s 200000 > split.bedpe
         $PYTHON $BEDPE_TO_BKPTS -i split.bedpe -f ~{assembly_name} -q contigs.fa -e ref.fa > breakpoints.bedpe
-        $SVTOOLS bedpesort breakpoints.bedpe | $PERL $REARRANGE_BREAKPOINTS > breakpoints.sorted.bedpe.1
+        $BEDPESORT breakpoints.bedpe | $PERL $REARRANGE_BREAKPOINTS > breakpoints.sorted.bedpe.1
         cat <($GREP "^#" breakpoints.sorted.bedpe.1) <(paste <($GREP -v "^#" breakpoints.sorted.bedpe.1 | cut -f 1-6) <(paste -d : <($GREP -v "^#" breakpoints.sorted.bedpe.1 | cut -f 7) <($GREP -v "^#" breakpoints.sorted.bedpe.1 | cut -f 19 | sed 's/.*SVLEN=/SVLEN=/' | sed 's/;.*//')) <($GREP -v "^#" breakpoints.sorted.bedpe.1 | cut -f 8-)) | $PERL $ADD_ALIGNMENT_GAP_INFO > breakpoints.sorted.fixed.bedpe
     mv breakpoints.sorted.fixed.bedpe breakpoints.sorted.bedpe
     >>>
@@ -503,7 +573,8 @@ task call_small_variants {
         BGZIP=/opt/hall-lab/htslib-1.9/bin/bgzip
         PYTHON=/opt/hall-lab/python-2.7.15/bin/python
         VAR_TO_VCF=/opt/hall-lab/scripts/varToVcf.py
-        SVTOOLS=/opt/hall-lab/python-2.7.15/bin/svtools
+        #SVTOOLS=/opt/hall-lab/python-2.7.15/bin/svtools
+        VCFSORT=/scratch1/fs1/ccdg/abelhj/assembly_validation/docker/analyze_assemblies/scripts/vcfsort
         PERL=/usr/bin/perl
         GENOTYPE_VCF=/opt/hall-lab/scripts/vcfToGenotyped.pl
         TABIX=/opt/hall-lab/htslib-1.9/bin/tabix
@@ -511,9 +582,9 @@ task call_small_variants {
         ln -s ~{ref_index} ref.fa.fai
         $SAMTOOLS view -h ~{alignment} | $K8 $PAFTOOLS sam2paf - | sort -k6,6 -k8,8n | $K8 $PAFTOOLS call -l 1 -L 1 -q 0 - | grep "^V" | sort -V | $BGZIP -c > loose.var.txt.gz
         $PYTHON $VAR_TO_VCF -i <(zcat loose.var.txt.gz) -r ref.fa -s ~{assembly_name} -o loose.vcf -p ~{id_prefix}
-        $SVTOOLS vcfsort loose.vcf | $PERL $GENOTYPE_VCF | $BGZIP -c > loose.genotyped.vcf.gz
+        $VCFSORT loose.vcf | $PERL $GENOTYPE_VCF | $BGZIP -c > loose.genotyped.vcf.gz
         $TABIX -f -p vcf loose.genotyped.vcf.gz
-        $SVTOOLS vcfsort loose.vcf.2.vcf | $PERL $GENOTYPE_VCF | $BGZIP -c > loose2.genotyped.vcf.gz
+        $VCFSORT loose.vcf.2.vcf | $PERL $GENOTYPE_VCF | $BGZIP -c > loose2.genotyped.vcf.gz
         $TABIX -f -p vcf loose2.genotyped.vcf.gz
     >>>
     runtime {
@@ -538,6 +609,7 @@ task align_contigs {
         MINIMAP2=/opt/hall-lab/minimap2/minimap2
         SAMTOOLS=/opt/hall-lab/samtools-1.9/bin/samtools
         $MINIMAP2 -ax asm5 -L --cs ~{ref} ~{contigs} | $SAMTOOLS sort -T tmp -O bam - > aligned.bam
+        $SAMTOOLS index aligned.bam
     >>>
     runtime {
         memory: "64G"
@@ -545,5 +617,6 @@ task align_contigs {
     }
     output {
         File bam = "aligned.bam"
+        File bam_index = "aligned.bam.bai"
     }
 }
