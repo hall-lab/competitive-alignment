@@ -273,7 +273,7 @@ task index_fasta {
     >>>
     runtime {
         memory: "4G"
-        docker: "apregier/analyze_assemblies@sha256:4cd67e009ae65820772265b572fc8cb9ce9e6e09228d1d73ee1f5d9118e91fca"
+        docker: "abelhj/analyze_assemblies@sha256:32c6932b73b7f8ef6888ddc2873c57911f3041fe5975c3d6c625808222021eab"
     }
     output {
         File unzipped_fasta = "unzipped.fa"
@@ -289,8 +289,8 @@ task combine_sv {
     command <<<
         set -exo pipefail
         BEDTOOLS=/opt/hall-lab/bedtools
-        #SVTOOLS=/opt/hall-lab/python-2.7.15/bin/svtools
-        BEDPESORT=/scratch1/fs1/ccdg/abelhj/assembly_validation/docker/analyze_assemblies/scripts/bedpesort
+        BEDPESORT=/opt/hall-lab/scripts/bedpesort
+        #BEDPESORT=/scratch1/fs1/ccdg/abelhj/assembly_validation/docker/analyze_assemblies/scripts/bedpesort
         $BEDTOOLS pairtopair -type both -a ~{sv_ref1} -b ~{sv_ref2} -is -slop 50 | $BEDPESORT | cut -f 1-6,11 | uniq | awk '{print $s ".homalt." NR}' > ref1_ref2_homozygous.bedpe
         $BEDTOOLS pairtopair -type notboth -a ~{sv_ref1} -b ~{sv_ref2} -is -slop 50 | $BEDPESORT | cut -f 1-6,11 | uniq | awk '{print $s ".ref1." NR}' > ref1_het.bedpe
         $BEDTOOLS pairtopair -type notboth -b ~{sv_ref1} -a ~{sv_ref2} -is -slop 50 | $BEDPESORT | cut -f 1-6,11 | uniq | awk '{print $s ".ref2." NR}' > ref2_het.bedpe
@@ -298,7 +298,7 @@ task combine_sv {
     >>>
     runtime {
         memory: "16G"
-        docker: "apregier/analyze_assemblies@sha256:4cd67e009ae65820772265b572fc8cb9ce9e6e09228d1d73ee1f5d9118e91fca"
+        docker: "abelhj/analyze_assemblies@sha256:32c6932b73b7f8ef6888ddc2873c57911f3041fe5975c3d6c625808222021eab"
     }
     output {
         File bedpe = "ref1_ref2.bedpe"
@@ -339,7 +339,7 @@ task count_self_variants {
     >>>
     runtime {
         memory: "16G"
-        docker: "apregier/analyze_assemblies@sha256:4cd67e009ae65820772265b572fc8cb9ce9e6e09228d1d73ee1f5d9118e91fca"
+        docker: "abelhj/analyze_assemblies@sha256:32c6932b73b7f8ef6888ddc2873c57911f3041fe5975c3d6c625808222021eab"
     }
     output {
         File counts = "counts.txt"
@@ -402,7 +402,7 @@ task count_variants {
     >>>
     runtime {
         memory: "16G"
-        docker: "apregier/analyze_assemblies@sha256:4cd67e009ae65820772265b572fc8cb9ce9e6e09228d1d73ee1f5d9118e91fca"
+        docker: "abelhj/analyze_assemblies@sha256:32c6932b73b7f8ef6888ddc2873c57911f3041fe5975c3d6c625808222021eab"
     }
     output {
         File counts = "counts.txt"
@@ -494,7 +494,7 @@ task combine_small_variants {
     >>>
     runtime {
         memory: "64G"
-        docker: "apregier/analyze_assemblies@sha256:4cd67e009ae65820772265b572fc8cb9ce9e6e09228d1d73ee1f5d9118e91fca"
+        docker: "abelhj/analyze_assemblies@sha256:32c6932b73b7f8ef6888ddc2873c57911f3041fe5975c3d6c625808222021eab"
     }
     output {
         File fasta = "small_variants.combined.fasta"
@@ -514,7 +514,7 @@ task call_namesort {
     >>>
     runtime {
         memory: "64G"
-        docker: "apregier/analyze_assemblies@sha256:4cd67e009ae65820772265b572fc8cb9ce9e6e09228d1d73ee1f5d9118e91fca"
+        docker: "abelhj/analyze_assemblies@sha256:32c6932b73b7f8ef6888ddc2873c57911f3041fe5975c3d6c625808222021eab"
     }
     output {
         File namesorted_bam = "namesorted.bam"
@@ -531,12 +531,10 @@ task call_sv {
         set -exo pipefail
         SAMTOOLS=/opt/hall-lab/samtools-1.9/bin/samtools
         PYTHON=/opt/hall-lab/python-2.7.15/bin/python
-        #SPLIT_TO_BEDPE=/opt/hall-lab/scripts/splitReadSamToBedpe
-        #BEDPE_TO_BKPTS=/opt/hall-lab/scripts/splitterToBreakpoint
-        SPLIT_TO_BEDPE=/storage1/fs1/ccdg/Active/analysis/abelhj/pangenome/cromwell/assembly_validation/docker/analyze_assemblies/scripts/splitReadSamToBedpe2inv
-        BEDPE_TO_BKPTS=/storage1/fs1/ccdg/Active/analysis/abelhj/pangenome/cromwell/assembly_validation/docker/analyze_assemblies/scripts/splitterToBreakpoint2
-        #SVTOOLS=/opt/hall-lab/python-2.7.15/bin/svtools
-        BEDPESORT=/storage1/fs1/ccdg/Active/analysis/abelhj/pangenome/cromwell/assembly_validation/docker/analyze_assemblies/scripts/bedpesort
+        
+        SPLIT_TO_BEDPE=/opt/hall-lab/scripts/splitReadSamToBedpe2inv
+        BEDPE_TO_BKPTS=/opt/hall-lab/scripts/splitterToBreakpoint2
+        BEDPESORT=/opt/hall-lab/scripts/bedpesort
         PERL=/usr/bin/perl
         REARRANGE_BREAKPOINTS=/opt/hall-lab/scripts/rearrange_breakpoints.pl
         GREP=/bin/grep
@@ -550,7 +548,7 @@ task call_sv {
     >>>
     runtime {
         memory: "64G"
-        docker: "apregier/analyze_assemblies@sha256:4cd67e009ae65820772265b572fc8cb9ce9e6e09228d1d73ee1f5d9118e91fca"
+        docker: "abelhj/analyze_assemblies@sha256:32c6932b73b7f8ef6888ddc2873c57911f3041fe5975c3d6c625808222021eab"
     }
     output {
         File bedpe = "breakpoints.sorted.bedpe"
@@ -573,7 +571,6 @@ task call_small_variants {
         BGZIP=/opt/hall-lab/htslib-1.9/bin/bgzip
         PYTHON=/opt/hall-lab/python-2.7.15/bin/python
         VAR_TO_VCF=/opt/hall-lab/scripts/varToVcf.py
-        #SVTOOLS=/opt/hall-lab/python-2.7.15/bin/svtools
         VCFSORT=/scratch1/fs1/ccdg/abelhj/assembly_validation/docker/analyze_assemblies/scripts/vcfsort
         PERL=/usr/bin/perl
         GENOTYPE_VCF=/opt/hall-lab/scripts/vcfToGenotyped.pl
@@ -589,7 +586,7 @@ task call_small_variants {
     >>>
     runtime {
         memory: "64G"
-        docker: "apregier/analyze_assemblies@sha256:4cd67e009ae65820772265b572fc8cb9ce9e6e09228d1d73ee1f5d9118e91fca"
+        docker: "abelhj/analyze_assemblies@sha256:32c6932b73b7f8ef6888ddc2873c57911f3041fe5975c3d6c625808222021eab"
     }
     output {
         File vcf = "loose.genotyped.vcf.gz"
@@ -613,7 +610,7 @@ task align_contigs {
     >>>
     runtime {
         memory: "64G"
-        docker: "apregier/analyze_assemblies@sha256:4cd67e009ae65820772265b572fc8cb9ce9e6e09228d1d73ee1f5d9118e91fca"
+        docker: "abelhj/analyze_assemblies@sha256:32c6932b73b7f8ef6888ddc2873c57911f3041fe5975c3d6c625808222021eab"
     }
     output {
         File bam = "aligned.bam"
