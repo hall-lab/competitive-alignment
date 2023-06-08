@@ -1,0 +1,1 @@
+sdiff -s ../haploid/$1 $1
